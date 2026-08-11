@@ -17,6 +17,18 @@
       --accent-color: #39ff14;
     }
 
+    .player-chassis[data-theme="purple"] {
+      --bg-metal: linear-gradient(180deg, #5e3a7d 0%, #2f1f46 40%, #180f27 100%);
+      --face-metal: linear-gradient(180deg, #4b2f63 0%, #241535 100%);
+      --btn-grad: linear-gradient(180deg, #7c5ca8 0%, #4d3367 50%, #24183a 100%);
+      --btn-active: linear-gradient(180deg, #24183a 0%, #5a3d7d 100%);
+      --display-bg: #140b1f;
+      --led-green: #c084ff;
+      --led-dim: #2f1748;
+      --accent-silver: #d9c9ff;
+      --accent-color: #c084ff;
+    }
+
     * {
       box-sizing: border-box;
       user-select: none;
@@ -599,6 +611,18 @@
       box-shadow: 0 0 15px rgba(57, 255, 20, 0.2);
     }
 
+    .theme-toggle {
+      display: flex;
+      gap: 3px;
+      flex-wrap: wrap;
+    }
+
+    .theme-toggle .retro-btn {
+      min-width: 54px;
+      font-size: 8px;
+      padding: 5px 6px;
+    }
+
     .vol-container {
       display: flex;
       align-items: center;
@@ -923,6 +947,10 @@
       <button class="retro-btn" id="nextBtn">►►</button>
       <button class="retro-btn" id="pipBtn" title="Floating Picture-in-Picture">📺</button>
     </div>
+    <div class="theme-toggle">
+      <button class="retro-btn theme-btn active-mode" id="themeGreenBtn" data-theme="green">GREEN</button>
+      <button class="retro-btn theme-btn" id="themePurpleBtn" data-theme="purple">PURPLE</button>
+    </div>
     <div class="vol-container">
       <span class="vol-label">VOL</span>
       <input type="range" id="volBar" class="vol-slider" value="80" min="0" max="100">
@@ -978,6 +1006,9 @@
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
     const pipBtn = document.getElementById('pipBtn');
+    const playerChassis = document.getElementById('playerChassis');
+    const themeGreenBtn = document.getElementById('themeGreenBtn');
+    const themePurpleBtn = document.getElementById('themePurpleBtn');
     const seekBar = document.getElementById('seekBar');
     const volBar = document.getElementById('volBar');
     const timeDisplay = document.getElementById('timeDisplay');
@@ -1055,6 +1086,14 @@
       } catch(e) {
         console.log("AudioContext blocked until user gesture.");
       }
+    }
+
+    function setTheme(theme) {
+      const selectedTheme = theme === 'purple' ? 'purple' : 'green';
+      playerChassis.setAttribute('data-theme', selectedTheme);
+      [themeGreenBtn, themePurpleBtn].forEach((btn) => {
+        btn.classList.toggle('active-mode', btn.getAttribute('data-theme') === selectedTheme);
+      });
     }
 
     // --- Picture-in-Picture ---
@@ -1404,6 +1443,10 @@
     };
 
     // --- Event Listeners ---
+
+    themeGreenBtn.addEventListener('click', () => setTheme('green'));
+    themePurpleBtn.addEventListener('click', () => setTheme('purple'));
+    setTheme('green');
 
     clearQueueBtn.addEventListener('click', clearQueue);
     
