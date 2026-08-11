@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CyberAmp 2000 · Radio Edition</title>
+  <title>CyberAmp 2000 · Pro Edition</title>
   <style>
     :root {
       --bg-metal: linear-gradient(180deg, #4c525a 0%, #292d32 40%, #1a1c1e 100%);
@@ -943,14 +943,25 @@
       background: #3a3f47;
       border: 1px solid #5a636e;
     }
+
+    /* Crossfade animation for vinyl */
+    .vinyl-record.crossfade {
+      animation: crossfadePulse 0.8s ease-in-out;
+    }
+
+    @keyframes crossfadePulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
+    }
   </style>
 </head>
 <body>
 
 <div class="player-chassis" id="playerChassis">
   <div class="title-bar">
-    <span class="title-text">📻 CyberAmp Radio</span>
-    <span class="brand-badge">VER 10.0</span>
+    <span class="title-text">🎵 CyberAmp Pro</span>
+    <span class="brand-badge">VER 11.0</span>
   </div>
 
   <!-- Viewport Screen -->
@@ -998,7 +1009,7 @@
         </div>
       </div>
       <div class="marquee-container">
-        <div class="marquee-text" id="marqueeText">📻 CyberAmp Radio --- Tap a preset or paste a stream URL ---</div>
+        <div class="marquee-text" id="marqueeText">🎵 CyberAmp Pro --- Auto-play, Crossfade, and Shuffle enabled ---</div>
       </div>
     </div>
     <div class="viz-box">
@@ -1018,6 +1029,7 @@
       <button class="retro-btn" id="stopBtn">◼</button>
       <button class="retro-btn" id="prevBtn">◄◄</button>
       <button class="retro-btn" id="nextBtn">►►</button>
+      <button class="retro-btn" id="shuffleBtn" title="Shuffle">🔀</button>
       <button class="retro-btn" id="pipBtn" title="Floating Picture-in-Picture">📺</button>
     </div>
     <div class="theme-toggle">
@@ -1102,6 +1114,7 @@
     const stopBtn = document.getElementById('stopBtn');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
+    const shuffleBtn = document.getElementById('shuffleBtn');
     const pipBtn = document.getElementById('pipBtn');
     const playerChassis = document.getElementById('playerChassis');
     const themeGreenBtn = document.getElementById('themeGreenBtn');
@@ -1139,8 +1152,13 @@
     let builtInVideoUrl = '';
     let isPipActive = false;
     let autoplayEnabled = true;
+    let isShuffleEnabled = false;
+    let crossfadeDuration = 2000; // 2 seconds crossfade
+    let isCrossfading = false;
     let touchTimeout = null;
     let currentMediaMode = 'radio';
+    let playbackHistory = [];
+    let isTransitioning = false;
 
     // --- Toast ---
     function showToast(msg) {
@@ -1171,12 +1189,60 @@
       return currentMediaMode === 'radio' ? audio : video;
     }
 
+    // --- Get Playlist Items ---
+    function getPlaylistItems() {
+      return playlist.querySelectorAll('.playlist-item');
+    }
+
+    // --- Get Next Track Index ---
+    function getNextTrackIndex() {
+      const items = getPlaylistItems();
+      if (items.length === 0) return -1;
+
+      if (isShuffleEnabled) {
+        // Get random track different from current
+        let randomIndex;
+        let attempts = 0;
+        do {
+          randomIndex = Math.floor(Math.random() * items.length);
+          attempts++;
+        } while (randomIndex === currentTrackIndex && items.length > 1 && attempts < 20);
+        return randomIndex;
+      }
+
+      // Linear next
+      return (currentTrackIndex + 1) % items.length;
+    }
+
+    // --- Get Previous Track Index ---
+    function getPrevTrackIndex() {
+      const items = getPlaylistItems();
+      if (items.length === 0) return -1;
+
+      if (isShuffleEnabled) {
+        // Get random track different from current
+        let randomIndex;
+        let attempts = 0;
+        do {
+          randomIndex = Math.floor(Math.random() * items.length);
+          attempts++;
+        } while (randomIndex === currentTrackIndex && items.length > 1 && attempts < 20);
+        return randomIndex;
+      }
+
+      // Linear previous
+      let newIdx = currentTrackIndex - 1;
+      if (newIdx < 0) newIdx = items.length - 1;
+      return newIdx;
+    }
+
     // --- Web Audio API Context ---
     let audioCtx = null;
     let analyser = null;
     let videoSourceNode = null;
     let audioSourceNode = null;
     let dataArray = null;
+    let gainNode = null;
 
     function initAudioContext() {
       if (!audioCtx) {
@@ -1184,16 +1250,21 @@
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           analyser = audioCtx.createAnalyser();
           analyser.fftSize = 64;
+          gainNode = audioCtx.createGain();
+          gainNode.gain.value = 1;
+          
           videoSourceNode = audioCtx.createMediaElementSource(video);
           audioSourceNode = audioCtx.createMediaElementSource(audio);
           dataArray = new Uint8Array(analyser.frequencyBinCount);
-          analyser.connect(audioCtx.destination);
+          
+          analyser.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
         } catch (e) {
           console.log('AudioContext blocked or already initialized:', e);
         }
       }
 
-      if (audioCtx && videoSourceNode && audioSourceNode) {
+      if (audioCtx && videoSourceNode && audioSourceNode && analyser) {
         try {
           videoSourceNode.disconnect();
           audioSourceNode.disconnect();
@@ -1202,6 +1273,183 @@
         } catch (err) {
           console.warn('Node routing exception:', err);
         }
+      }
+    }
+
+    // --- Crossfade Function ---
+    function applyCrossfade(fromMedia, toMedia, callback) {
+      if (isCrossfading) return;
+      isCrossfading = true;
+
+      // Show crossfade animation on vinyl
+      vinylRecord.classList.add('crossfade');
+      setTimeout(() => vinylRecord.classList.remove('crossfade'), 800);
+
+      // Fade out current
+      const fadeOut = () => {
+        return new Promise((resolve) => {
+          if (!audioCtx) {
+            resolve();
+            return;
+          }
+          
+          try {
+            const currentTime = audioCtx.currentTime;
+            gainNode.gain.setValueAtTime(1, currentTime);
+            gainNode.gain.linearRampToValueAtTime(0, currentTime + crossfadeDuration / 1000);
+            
+            setTimeout(() => {
+              resolve();
+            }, crossfadeDuration);
+          } catch (e) {
+            resolve();
+          }
+        });
+      };
+
+      // Fade in new
+      const fadeIn = () => {
+        return new Promise((resolve) => {
+          if (!audioCtx) {
+            resolve();
+            return;
+          }
+          
+          try {
+            const currentTime = audioCtx.currentTime;
+            gainNode.gain.setValueAtTime(0, currentTime);
+            gainNode.gain.linearRampToValueAtTime(1, currentTime + crossfadeDuration / 1000);
+            
+            setTimeout(() => {
+              resolve();
+            }, crossfadeDuration);
+          } catch (e) {
+            resolve();
+          }
+        });
+      };
+
+      // Execute crossfade
+      fadeOut().then(() => {
+        // Stop old media
+        if (fromMedia) {
+          fromMedia.pause();
+        }
+        
+        // Start new media
+        if (toMedia) {
+          toMedia.play().catch(() => {});
+        }
+        
+        // Fade in
+        fadeIn().then(() => {
+          isCrossfading = false;
+          if (callback) callback();
+        });
+      });
+    }
+
+    // --- Load Track with Crossfade ---
+    function loadTrack(index, useCrossfade = true) {
+      const items = getPlaylistItems();
+      if (items.length === 0 || isTransitioning) return;
+      
+      // If same track, just restart
+      if (index === currentTrackIndex) {
+        const active = getActiveMedia();
+        active.currentTime = 0;
+        active.play().catch(() => {});
+        return;
+      }
+
+      isTransitioning = true;
+      const oldIndex = currentTrackIndex;
+      const oldMedia = getActiveMedia();
+      
+      items.forEach((item, i) => item.classList.toggle('active', i === index));
+      currentTrackIndex = index;
+
+      const selected = items[index];
+      const title = selected.getAttribute('data-title') || 'Local File';
+      const radioUrl = selected.getAttribute('data-radio-url');
+      const src = selected.getAttribute('data-src') || builtInVideoUrl;
+
+      // Store old media mode
+      const oldMode = currentMediaMode;
+
+      if (radioUrl) {
+        currentMediaMode = 'radio';
+        marqueeText.innerText = `📻 ${title} --- RADIO ---`;
+        radioUrlInput.value = radioUrl;
+        
+        // Play radio stream with crossfade
+        audio.crossOrigin = 'anonymous';
+        audio.src = radioUrl;
+        audio.load();
+
+        if (useCrossfade && oldMode === 'radio' && oldMedia) {
+          applyCrossfade(oldMedia, audio, () => {
+            isTransitioning = false;
+            updateMediaDisplay();
+            initAudioContext();
+          });
+        } else {
+          audio.play().then(() => {
+            isTransitioning = false;
+            updateMediaDisplay();
+            initAudioContext();
+          }).catch(() => {
+            isTransitioning = false;
+            updateMediaDisplay();
+          });
+        }
+        return;
+      }
+
+      // Video/Audio file
+      currentMediaMode = 'video';
+      marqueeText.innerText = `${title} --- CyberAmp Engine ---`;
+      
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+      video.src = src;
+      video.load();
+
+      if (useCrossfade && oldMode === 'video' && oldMedia) {
+        applyCrossfade(oldMedia, video, () => {
+          isTransitioning = false;
+          updateMediaDisplay();
+          initAudioContext();
+        });
+      } else {
+        video.play().then(() => {
+          isTransitioning = false;
+          updateMediaDisplay();
+          initAudioContext();
+        }).catch(() => {
+          isTransitioning = false;
+          statusText.innerText = 'READY';
+          updateMediaDisplay();
+        });
+      }
+    }
+
+    // --- Toggle Play/Pause ---
+    function togglePlay() {
+      const activeMedia = getActiveMedia();
+      initAudioContext();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+      if (activeMedia.paused) {
+        activeMedia.play().then(() => {
+          updateMediaDisplay();
+        }).catch((err) => {
+          console.error('Playback Error:', err);
+        });
+      } else {
+        activeMedia.pause();
+        updateMediaDisplay();
       }
     }
 
@@ -1247,7 +1495,7 @@
     function updateMediaDisplay() {
       const activeMedia = getActiveMedia();
       const hasVideoTracks = currentMediaMode === 'video' && video.videoWidth > 0 && video.videoHeight > 0;
-      const isPlaying = !activeMedia.paused && !activeMedia.ended;
+      const isPlaying = !activeMedia.paused && !activeMedia.ended && activeMedia.readyState > 2;
 
       if (currentMediaMode === 'radio' || (!hasVideoTracks && activeMedia.src)) {
         vinylWrapper.classList.add('visible');
@@ -1267,69 +1515,8 @@
         hoverPlayBtn.textContent = '►';
       }
 
-      const items = playlist.querySelectorAll('.playlist-item');
+      const items = getPlaylistItems();
       trackCounter.textContent = `${items.length} track${items.length !== 1 ? 's' : ''}`;
-    }
-
-    // --- Load Track ---
-    function loadTrack(index) {
-      const items = playlist.querySelectorAll('.playlist-item');
-      if (items.length === 0) return;
-
-      items.forEach((item, i) => item.classList.toggle('active', i === index));
-      currentTrackIndex = index;
-
-      const selected = items[index];
-      const title = selected.getAttribute('data-title') || 'Local File';
-      const radioUrl = selected.getAttribute('data-radio-url');
-
-      if (radioUrl) {
-        currentMediaMode = 'radio';
-        marqueeText.innerText = `📻 ${title} --- RADIO ---`;
-        radioUrlInput.value = radioUrl;
-        playRadioStream(radioUrl, title);
-        return;
-      }
-
-      currentMediaMode = 'video';
-      const src = selected.getAttribute('data-src') || builtInVideoUrl;
-
-      marqueeText.innerText = `${title} --- CyberAmp Engine ---`;
-      audio.pause();
-      audio.removeAttribute('src');
-      audio.load();
-      video.src = src;
-      video.load();
-
-      if (autoplayEnabled) {
-        video.play().then(() => {
-          updateMediaDisplay();
-          initAudioContext();
-        }).catch(() => {
-          statusText.innerText = 'READY';
-          updateMediaDisplay();
-        });
-      } else {
-        updateMediaDisplay();
-      }
-    }
-
-    // --- Toggle Play/Pause ---
-    function togglePlay() {
-      const activeMedia = getActiveMedia();
-      initAudioContext();
-      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-
-      if (activeMedia.paused) {
-        activeMedia.play().then(() => {
-          updateMediaDisplay();
-        }).catch((err) => {
-          console.error('Playback Error:', err);
-        });
-      } else {
-        activeMedia.pause();
-        updateMediaDisplay();
-      }
     }
 
     // --- Fullscreen ---
@@ -1381,27 +1568,27 @@
         return;
       }
 
-      currentMediaMode = 'radio';
-      video.pause();
-      video.removeAttribute('src');
-      video.load();
-
-      audio.crossOrigin = 'anonymous';
-      audio.src = streamUrl;
-      audio.load();
-
-      audio.play().then(() => {
-        formatText.innerText = 'RADIO';
-        statusText.innerText = 'STREAMING';
-        marqueeText.innerText = `📻 ${title || 'RADIO STREAM'} --- ${streamUrl}`;
-        updateMediaDisplay();
-        initAudioContext();
-        showToast(`📻 Streaming: ${title || 'Radio'}`);
-      }).catch((err) => {
-        console.error('Radio Error:', err);
-        statusText.innerText = 'ERROR';
-        showToast('⚠️ Radio blocked — check HTTPS/CORS headers or try a different stream');
+      // Add to playlist if not already there
+      const items = getPlaylistItems();
+      let existingIndex = -1;
+      items.forEach((item, i) => {
+        if (item.getAttribute('data-radio-url') === streamUrl) {
+          existingIndex = i;
+        }
       });
+
+      if (existingIndex === -1) {
+        const newItem = document.createElement('div');
+        newItem.className = 'playlist-item';
+        newItem.setAttribute('data-radio-url', streamUrl);
+        newItem.setAttribute('data-title', title || 'Custom Radio');
+        newItem.innerHTML = `<span>${title || 'Custom Radio'}</span><span>RADIO</span>`;
+        playlist.appendChild(newItem);
+        attachPlaylistListeners();
+        loadTrack(getPlaylistItems().length - 1);
+      } else {
+        loadTrack(existingIndex);
+      }
     }
 
     function stopRadioStream() {
@@ -1420,7 +1607,7 @@
     function addFilesToPlaylist(files) {
       if (!files || files.length === 0) return;
 
-      const startIdx = playlist.querySelectorAll('.playlist-item').length;
+      const startIdx = getPlaylistItems().length;
       let loadedCount = 0;
 
       Array.from(files).forEach((file) => {
@@ -1461,7 +1648,7 @@
     }
 
     function clearQueue() {
-      const items = playlist.querySelectorAll('.playlist-item');
+      const items = getPlaylistItems();
       if (!items.length) {
         showToast('🗑️ Queue already empty');
         return;
@@ -1485,7 +1672,7 @@
     }
 
     function attachPlaylistListeners() {
-      const items = playlist.querySelectorAll('.playlist-item');
+      const items = getPlaylistItems();
       items.forEach((item, index) => {
         item.onclick = () => loadTrack(index);
         item.ontouchstart = () => {
@@ -1494,6 +1681,13 @@
         };
       });
     }
+
+    // --- Shuffle Toggle ---
+    shuffleBtn.addEventListener('click', () => {
+      isShuffleEnabled = !isShuffleEnabled;
+      shuffleBtn.classList.toggle('active-mode', isShuffleEnabled);
+      showToast(isShuffleEnabled ? '🔀 Shuffle ON' : '🔀 Shuffle OFF');
+    });
 
     // --- Synthetic Test Video ---
     function generateBuiltInVideo() {
@@ -1537,9 +1731,9 @@
         cCtx.stroke();
         cCtx.fillStyle = '#39ff14';
         cCtx.font = 'bold 20px monospace';
-        cCtx.fillText('CYBERAMP RADIO READY', 160, 180);
+        cCtx.fillText('CYBERAMP PRO', 220, 180);
         cCtx.font = '13px monospace';
-        cCtx.fillText('TAP VIDEO TO PLAY/PAUSE', 180, 220);
+        cCtx.fillText('AUTO-PLAY · CROSSFADE · SHUFFLE', 150, 220);
         if (frame >= 90) {
           clearInterval(interval);
           mediaRecorder.stop();
@@ -1556,17 +1750,19 @@
       const numBars = Math.min(12, Math.floor(canvas.width / 8));
       const barWidth = (canvas.width / numBars) - 2;
       const activeMedia = getActiveMedia();
-      const isPlaying = activeMedia && !activeMedia.paused && !activeMedia.ended;
+      const isPlaying = activeMedia && !activeMedia.paused && !activeMedia.ended && activeMedia.readyState > 2;
 
       if (analyser && isPlaying) {
-        analyser.getByteFrequencyData(dataArray);
-        for (let i = 0; i < numBars; i++) {
-          const barHeight = Math.max(2, (dataArray[i] / 255) * (canvas.height - 4));
-          const x = i * (barWidth + 2);
-          const y = canvas.height - barHeight;
-          ctx.fillStyle = '#39ff14';
-          ctx.fillRect(x, y, barWidth, barHeight);
-        }
+        try {
+          analyser.getByteFrequencyData(dataArray);
+          for (let i = 0; i < Math.min(numBars, dataArray.length); i++) {
+            const barHeight = Math.max(2, (dataArray[i] / 255) * (canvas.height - 4));
+            const x = i * (barWidth + 2);
+            const y = canvas.height - barHeight;
+            ctx.fillStyle = '#39ff14';
+            ctx.fillRect(x, y, barWidth, barHeight);
+          }
+        } catch (e) {}
       } else {
         for (let i = 0; i < numBars; i++) {
           const barHeight = isPlaying ? Math.floor(Math.random() * (canvas.height - 6)) + 4 : 2;
@@ -1586,6 +1782,7 @@
       if (e.key === 'ArrowRight') { e.preventDefault(); getActiveMedia().currentTime += 5; }
       if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFullscreen(); }
       if (e.key === 'm' || e.key === 'M') { e.preventDefault(); const m = getActiveMedia(); m.muted = !m.muted; }
+      if (e.key === 's' || e.key === 'S') { e.preventDefault(); shuffleBtn.click(); }
     });
 
     // --- Error Handling ---
@@ -1658,16 +1855,25 @@
     });
 
     prevBtn.addEventListener('click', () => {
-      const items = playlist.querySelectorAll('.playlist-item');
-      let newIdx = currentTrackIndex - 1;
-      if (newIdx < 0) newIdx = items.length - 1;
-      loadTrack(newIdx);
+      const newIdx = getPrevTrackIndex();
+      if (newIdx !== -1) loadTrack(newIdx);
+    });
+
+    hoverPrevBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const newIdx = getPrevTrackIndex();
+      if (newIdx !== -1) loadTrack(newIdx);
     });
 
     nextBtn.addEventListener('click', () => {
-      const items = playlist.querySelectorAll('.playlist-item');
-      let newIdx = (currentTrackIndex + 1) % items.length;
-      loadTrack(newIdx);
+      const newIdx = getNextTrackIndex();
+      if (newIdx !== -1) loadTrack(newIdx);
+    });
+
+    hoverNextBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const newIdx = getNextTrackIndex();
+      if (newIdx !== -1) loadTrack(newIdx);
     });
 
     pipBtn.addEventListener('click', togglePictureInPicture);
@@ -1688,7 +1894,7 @@
 
     // --- Media Time Update ---
     const handleMediaTimeUpdate = (mediaElement) => {
-      if (mediaElement.duration && isFinite(mediaElement.duration) && !isUserSeeking) {
+      if (mediaElement.duration && isFinite(mediaElement.duration) && !isUserSeeking && !isTransitioning) {
         const pct = (mediaElement.currentTime / mediaElement.duration) * 100;
         seekBar.value = pct;
         hoverSeekBar.value = pct;
@@ -1714,11 +1920,50 @@
     video.addEventListener('pause', updateMediaDisplay);
     audio.addEventListener('pause', updateMediaDisplay);
 
+    // --- Auto-play next track with crossfade ---
+    function handleTrackEnd() {
+      if (!autoplayEnabled || isTransitioning) return;
+
+      // Check if it's a radio stream (don't auto-advance radio)
+      const activeMedia = getActiveMedia();
+      if (currentMediaMode === 'radio') return;
+
+      const items = getPlaylistItems();
+      if (items.length <= 1) {
+        // Loop the same track
+        activeMedia.currentTime = 0;
+        activeMedia.play().catch(() => {});
+        return;
+      }
+
+      const nextIndex = getNextTrackIndex();
+      if (nextIndex !== -1 && nextIndex !== currentTrackIndex) {
+        loadTrack(nextIndex, true);
+      } else if (items.length > 0) {
+        // Fallback: go to next or loop
+        const idx = isShuffleEnabled ? 
+          Math.floor(Math.random() * items.length) : 
+          (currentTrackIndex + 1) % items.length;
+        loadTrack(idx, true);
+      }
+    }
+
+    video.addEventListener('ended', handleTrackEnd);
+    audio.addEventListener('ended', handleTrackEnd);
+
     // --- Seek ---
     seekBar.addEventListener('input', () => {
       const m = getActiveMedia();
       if (m.duration && isFinite(m.duration)) {
         m.currentTime = (seekBar.value / 100) * m.duration;
+      }
+    });
+
+    hoverSeekBar.addEventListener('input', (e) => {
+      e.stopPropagation();
+      const m = getActiveMedia();
+      if (m.duration && isFinite(m.duration)) {
+        m.currentTime = (hoverSeekBar.value / 100) * m.duration;
       }
     });
 
@@ -1764,6 +2009,11 @@
         loadTrack(0);
       }
     }, 500);
+
+    // Show features on load
+    setTimeout(() => {
+      showToast('🎵 Auto-play, Crossfade & Shuffle enabled!', 3000);
+    }, 1500);
 
   })();
 </script>
