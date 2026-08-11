@@ -177,6 +177,70 @@
       filter: none !important;
     }
 
+    /* early 2000s visuals: overlay grid + scanlines + glitch */
+    .visual-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+      background: 
+        repeating-linear-gradient(0deg, rgba(0,255,0,0.03) 0px, rgba(0,255,0,0.03) 2px, transparent 2px, transparent 6px),
+        repeating-linear-gradient(90deg, rgba(0,255,0,0.02) 0px, rgba(0,255,0,0.02) 1px, transparent 1px, transparent 8px);
+      mix-blend-mode: screen;
+      opacity: 0.25;
+      display: block;
+      animation: scanMove 8s linear infinite;
+    }
+    @keyframes scanMove {
+      0% { background-position: 0 0, 0 0; }
+      100% { background-position: 0 20px, 4px 0; }
+    }
+
+    .glitch-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 11;
+      background: rgba(0,255,0,0.02);
+      box-shadow: inset 0 0 30px rgba(0,255,0,0.1);
+      opacity: 0.3;
+      animation: glitchFlicker 3s infinite;
+    }
+    @keyframes glitchFlicker {
+      0% { opacity: 0.2; transform: translateX(0); }
+      20% { opacity: 0.5; transform: translateX(-2px); }
+      40% { opacity: 0.1; transform: translateX(2px); }
+      60% { opacity: 0.4; transform: translateX(-1px); }
+      80% { opacity: 0.2; transform: translateX(1px); }
+      100% { opacity: 0.3; transform: translateX(0); }
+    }
+
+    .vhs-noise {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100" height="100" filter="url(%23noise)" opacity="0.08"/></svg>');
+      background-size: 200px 200px;
+      opacity: 0.2;
+      mix-blend-mode: overlay;
+      animation: noiseAnim 0.3s steps(2) infinite;
+    }
+    @keyframes noiseAnim {
+      0% { transform: translate(0, 0); }
+      50% { transform: translate(-5%, -5%); }
+      100% { transform: translate(5%, 5%); }
+    }
+
     .now-playing-overlay {
       position: absolute;
       top: 0;
@@ -1126,18 +1190,47 @@
     .repeat-off { opacity: 0.5; }
     .repeat-one { border-color: var(--accent-color); color: var(--accent-color); }
     .repeat-all { border-color: var(--accent-color); color: var(--accent-color); box-shadow: 0 0 15px rgba(57, 255, 20, 0.2); }
+
+    .playlist-item-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+      flex: 1;      /* Lets the container flex properly */
+      min-width: 0; /* Forces long text to truncate instead of stretching */
+    }
+
+    .playlist-item-left span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .item-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 2px;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 1px solid #32373d;
+    }
   </style>
 </head>
 <body>
 
 <div class="player-chassis" id="playerChassis">
   <div class="title-bar">
-    <span class="title-text">🎵 CyberAmp Complete</span>
+    <span class="title-text">🎵 CyberAmp 2000</span>
     <span class="brand-badge">VER 12.3</span>
   </div>
 
   <!-- Viewport Screen -->
   <div class="viewport-container" id="screenBox">
+    <!-- Early 2000s Visuals -->
+    <div class="visual-overlay"></div>
+    <div class="glitch-overlay"></div>
+    <div class="vhs-noise"></div>
+
     <!-- PiP Status -->
     <div class="pip-status" id="pipStatus">📺 PiP ACTIVE</div>
 
@@ -1191,7 +1284,7 @@
         </div>
       </div>
       <div class="marquee-container">
-        <div class="marquee-text" id="marqueeText">🎵 CyberAmp Complete --- Now with full album art support!</div>
+        <div class="marquee-text" id="marqueeText">🎵 CyberAmp 2000 --- early 2000s visuals + album art</div>
       </div>
     </div>
     <div class="viz-box">
@@ -1271,14 +1364,20 @@
       </div>
     </div>
     <div class="playlist-item active" id="sampleItem" data-title="NPO Radio 1" data-radio-url="https://icecast.omroep.nl/radio1-bb-mp3" draggable="true">
-      <span>1. NPO Radio 1</span>
+      <div class="playlist-item-left">
+        <img class="item-thumb" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Phonograph_record_%28music%29.svg/1200px-Phonograph_record_%28music%29.svg.png" alt="thumb">
+        <span>1. NPO Radio 1</span>
+      </div>
       <div class="item-actions">
         <span class="item-action-btn drag-handle">⠿</span>
         <span class="item-action-btn" data-action="remove">✕</span>
       </div>
     </div>
     <div class="playlist-item" id="sampleItem2" data-title="NPR" data-radio-url="https://npr-ice.streamguys1.com/live.mp3" draggable="true">
-      <span>2. NPR</span>
+      <div class="playlist-item-left">
+        <img class="item-thumb" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Phonograph_record_%28music%29.svg/1200px-Phonograph_record_%28music%29.svg.png" alt="thumb">
+        <span>2. NPR</span>
+      </div>
       <div class="item-actions">
         <span class="item-action-btn drag-handle">⠿</span>
         <span class="item-action-btn" data-action="remove">✕</span>
@@ -1546,7 +1645,84 @@
       });
     }
 
-    // --- Load Track ---
+    // --- Enhanced Album Art Extraction ---
+    function extractAlbumArtFromFile(file) {
+      return new Promise((resolve) => {
+        if (!file || !file.type.startsWith('audio/')) {
+          resolve(null);
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const arrayBuffer = e.target.result;
+            const uint8Array = new Uint8Array(arrayBuffer);
+            const coverData = extractCoverArtFromID3(uint8Array);
+            resolve(coverData || null);
+          } catch (err) {
+            resolve(null);
+          }
+        };
+        
+        // Bumped to 3MB. High-res embedded covers will get chopped if we only read 500KB.
+        const slice = file.slice(0, 3 * 1024 * 1024);
+        reader.readAsArrayBuffer(slice);
+      });
+    }
+
+    // Simple ID3 parser for cover art with fixed math
+    function extractCoverArtFromID3(data) {
+      try {
+        let offset = 0;
+        if (data[0] === 0x49 && data[1] === 0x44 && data[2] === 0x33) {
+          const size = ((data[6] & 0x7f) << 21) | ((data[7] & 0x7f) << 14) | 
+                       ((data[8] & 0x7f) << 7) | (data[9] & 0x7f);
+          
+          offset = 10;
+          const endOffset = Math.min(offset + size, data.length);
+          
+          while (offset < endOffset - 10) {
+            const frameId = String.fromCharCode(data[offset], data[offset+1], data[offset+2], data[offset+3]);
+            const frameSize = ((data[offset+4] & 0xff) << 24) | ((data[offset+5] & 0xff) << 16) | 
+                              ((data[offset+6] & 0xff) << 8) | (data[offset+7] & 0xff);
+            
+            const currentFrameDataStart = offset + 10;
+            offset += 10;
+            
+            if (frameId === 'APIC') {
+              offset++; // textEncoding
+              
+              let mimeEnd = offset;
+              while (mimeEnd < data.length && data[mimeEnd] !== 0x00) mimeEnd++;
+              const mimeType = String.fromCharCode(...data.slice(offset, mimeEnd));
+              offset = mimeEnd + 1;
+              
+              offset++; // pictureType
+              
+              let descEnd = offset;
+              while (descEnd < data.length && data[descEnd] !== 0x00) descEnd++;
+              offset = descEnd + 1;
+              
+              // Math fixed right here
+              const pictureEnd = Math.min(currentFrameDataStart + frameSize, data.length);
+              const pictureData = data.slice(offset, pictureEnd);
+              
+              const blob = new Blob([pictureData], { type: mimeType || 'image/jpeg' });
+              return URL.createObjectURL(blob);
+            }
+            
+            // Skip to the next frame
+            offset = currentFrameDataStart + frameSize;
+          }
+        }
+      } catch (e) {
+        console.log('Error parsing ID3:', e);
+      }
+      return null;
+    }
+
+    // --- Load Track with improved art handling ---
     function loadTrack(index, useCrossfade = true) {
       const items = getPlaylistItems();
       if (items.length === 0) return;
@@ -1586,16 +1762,38 @@
       const title = selected.getAttribute('data-title') || 'Local File';
       const radioUrl = selected.getAttribute('data-radio-url');
       const src = selected.getAttribute('data-src') || builtInVideoUrl;
+      
+      // Get album art - try multiple sources
+      let artUrl = selected.getAttribute('data-cover') || '';
+      
+      // If no art URL yet, try to find it from the file object if it was stored
+      if (!artUrl && selected._fileObj) {
+        // If we have a file object, try to extract art
+        extractAlbumArtFromFile(selected._fileObj).then((extractedArt) => {
+          if (extractedArt) {
+            selected.setAttribute('data-cover', extractedArt);
+            artUrl = extractedArt;
+            updateArtwork(artUrl);
+          }
+        });
+      }
 
       let displayTitle = title;
       let displayArtist = '';
-      let artUrl = selected.getAttribute('data-cover') || '';
       
       if (title.includes(' - ')) {
         const parts = title.split(' - ');
         displayArtist = parts[0];
         displayTitle = parts.slice(1).join(' - ');
       }
+
+      // If no art URL, use default
+      if (!artUrl || artUrl === '') {
+        artUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Phonograph_record_%28music%29.svg/1200px-Phonograph_record_%28music%29.svg.png';
+      }
+
+      // Update artwork immediately
+      updateArtwork(artUrl);
 
       if (radioUrl) {
         currentMediaMode = 'radio';
@@ -1634,14 +1832,7 @@
       currentMediaMode = 'video';
       marqueeText.innerText = `${title} --- CyberAmp Engine ---`;
       
-      // Use uploaded cover art or fallback to default
-      if (!artUrl) {
-        artUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Phonograph_record_%28music%29.svg/1200px-Phonograph_record_%28music%29.svg.png';
-      }
       updateNowPlaying(displayTitle || title, displayArtist || 'Local File', artUrl, '▶ Playing');
-      
-      // Ensure the spinning vinyl uses the correct artwork 
-      document.getElementById('coverArt').src = artUrl;
       
       audio.pause();
       audio.removeAttribute('src');
@@ -1677,6 +1868,18 @@
       }
     }
 
+    // --- Update Artwork helper ---
+    function updateArtwork(artUrl) {
+      const defaultArt = 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Phonograph_record_%28music%29.svg/1200px-Phonograph_record_%28music%29.svg.png';
+      if (artUrl && (artUrl.startsWith('http') || artUrl.startsWith('blob:') || artUrl.startsWith('data:'))) {
+        document.getElementById('coverArt').src = artUrl;
+        npArt.src = artUrl;
+      } else {
+        document.getElementById('coverArt').src = defaultArt;
+        npArt.src = defaultArt;
+      }
+    }
+
     // --- Update Now Playing ---
     function updateNowPlaying(title, artist, artUrl, status = '● Live') {
       if (title) {
@@ -1686,7 +1889,10 @@
         nowPlayingOverlay.classList.remove('visible');
       }
       if (artist) npArtist.textContent = artist;
-      if (artUrl && artUrl.startsWith('http')) npArt.src = artUrl;
+      if (artUrl && (artUrl.startsWith('http') || artUrl.startsWith('blob:') || artUrl.startsWith('data:'))) {
+        npArt.src = artUrl;
+        document.getElementById('coverArt').src = artUrl;
+      }
       npStatus.textContent = status;
     }
 
@@ -1848,7 +2054,10 @@
         newItem.setAttribute('data-title', displayTitle);
         newItem.setAttribute('draggable', 'true');
         newItem.innerHTML = `
-          <span>${displayTitle}</span>
+          <div class="playlist-item-left">
+            <img class="item-thumb" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Phonograph_record_%28music%29.svg/1200px-Phonograph_record_%28music%29.svg.png" alt="thumb">
+            <span>${displayTitle}</span>
+          </div>
           <div class="item-actions">
             <span class="item-action-btn drag-handle">⠿</span>
             <span class="item-action-btn" data-action="remove">✕</span>
@@ -1876,12 +2085,13 @@
       showToast('📻 Radio stopped');
     }
 
-    // --- File Handling with Album Art ---
+    // --- Enhanced File Handling with Album Art ---
     function addFilesToPlaylist(files) {
       if (!files || files.length === 0) return;
 
       const startIdx = getPlaylistItems().length;
       let loadedCount = 0;
+      const pendingItems = [];
 
       Array.from(files).forEach((file) => {
         try {
@@ -1896,28 +2106,35 @@
           newItem.setAttribute('data-src', fileURL);
           newItem.setAttribute('data-title', file.name);
           newItem.setAttribute('draggable', 'true');
+          newItem._fileObj = file; // Store file object for later art extraction
           
           let displayName = file.name.replace(/\.[^/.]+$/, '');
           const isAudio = file.type.startsWith('audio/') || ['mp3', 'm4a', 'wav', 'flac', 'ogg'].some(ext => file.name.toLowerCase().endsWith(ext));
-          const typeLabel = isAudio ? 'AUDIO' : 'VIDEO';
           const num = startIdx + loadedCount + 1;
           
+          // Try to extract album art immediately for audio files
           if (isAudio) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-              try {
-                const arrayBuffer = e.target.result;
-              } catch (err) {
-                console.log('Could not extract cover art:', err);
+            extractAlbumArtFromFile(file).then((artUrl) => {
+              if (artUrl) {
+                newItem.setAttribute('data-cover', artUrl);
+                
+                // Update the tiny thumbnail in the playlist
+                const thumb = newItem.querySelector('.item-thumb');
+                if (thumb) thumb.src = artUrl;
+                
+                // Fix the sync logic: check if this is the first item in pendingItems
+                if (startIdx === 0 && newItem === pendingItems[0]) {
+                  updateArtwork(artUrl);
+                }
               }
-            };
-            reader.readAsArrayBuffer(file);
+            });
           }
           
-          const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
-          
           newItem.innerHTML = `
-            <span>${num}. ${displayName}</span>
+            <div class="playlist-item-left">
+              <img class="item-thumb" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Phonograph_record_%28music%29.svg/1200px-Phonograph_record_%28music%29.svg.png" alt="thumb">
+              <span>${num}. ${displayName}</span>
+            </div>
             <div class="item-actions">
               <span class="item-action-btn drag-handle">⠿</span>
               <span class="item-action-btn" data-action="remove">✕</span>
@@ -1925,6 +2142,7 @@
           `;
 
           playlist.appendChild(newItem);
+          pendingItems.push(newItem);
           attachPlaylistListeners();
           loadedCount++;
         } catch (err) {
@@ -1933,6 +2151,7 @@
         }
       });
 
+      // Also check for image files that might be album art
       const imageFiles = Array.from(files).filter(f => 
         f.type.startsWith('image/') || 
         ['.jpg', '.jpeg', '.png', '.gif', '.bmp'].some(ext => f.name.toLowerCase().endsWith(ext))
@@ -1955,8 +2174,7 @@
               if (item.classList.contains('active')) {
                 const artUrl = item.getAttribute('data-cover');
                 if (artUrl) {
-                  npArt.src = artUrl;
-                  document.getElementById('coverArt').src = artUrl;
+                  updateArtwork(artUrl);
                 }
               }
             }
@@ -1969,6 +2187,7 @@
         showToast(`📁 Loaded ${loadedCount} file(s)`);
         updateMediaDisplay();
 
+        // If this is the first track, load it
         if (startIdx === 0) {
           loadTrack(0);
         }
@@ -1988,7 +2207,18 @@
         return;
       }
 
-      items.forEach((item) => item.remove());
+      items.forEach((item) => {
+        // Revoke object URLs to free memory
+        const src = item.getAttribute('data-src');
+        if (src && src.startsWith('blob:')) {
+          URL.revokeObjectURL(src);
+        }
+        const cover = item.getAttribute('data-cover');
+        if (cover && cover.startsWith('blob:')) {
+          URL.revokeObjectURL(cover);
+        }
+        item.remove();
+      });
       currentTrackIndex = 0;
       shuffleHistory = [];
       shuffleIndex = 0;
@@ -2045,6 +2275,16 @@
 
       const wasActive = item.classList.contains('active');
       const wasIndex = Array.from(items).indexOf(item);
+      
+      // Clean up object URLs
+      const src = item.getAttribute('data-src');
+      if (src && src.startsWith('blob:')) {
+        URL.revokeObjectURL(src);
+      }
+      const cover = item.getAttribute('data-cover');
+      if (cover && cover.startsWith('blob:')) {
+        URL.revokeObjectURL(cover);
+      }
       
       item.remove();
       
@@ -2131,7 +2371,7 @@
     function updateItemNumbers() {
       const items = getPlaylistItems();
       items.forEach((item, i) => {
-        const span = item.querySelector('span');
+        const span = item.querySelector('.playlist-item-left span');
         if (span) {
           const text = span.textContent.replace(/^\d+\.\s*/, '');
           span.textContent = `${i + 1}. ${text}`;
@@ -2209,7 +2449,7 @@
         cCtx.stroke();
         cCtx.fillStyle = '#39ff14';
         cCtx.font = 'bold 20px monospace';
-        cCtx.fillText('CYBERAMP COMPLETE', 200, 180);
+        cCtx.fillText('CYBERAMP 2000', 200, 180);
         cCtx.font = '13px monospace';
         cCtx.fillText('ALBUM ART SUPPORTED!', 210, 220);
         if (frame >= 90) {
@@ -2599,7 +2839,7 @@
 
     // Show welcome
     setTimeout(() => {
-      showToast('🎵 Album art support added! Upload images with your music.', 3000);
+      showToast('🎵 Album art loading enabled! Upload audio files with embedded covers.', 3000);
     }, 1500);
 
   })();
