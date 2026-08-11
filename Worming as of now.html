@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CyberAmp 2000 · Mobile Enhanced</title>
+  <style>
+    :root {
+      --bg-metal: linear-gradient(180deg, #4c525a 0%, #292d32 40%, #1a1c1e 100%);
+      --face-metal: linear-gradient(180deg, #32373d 0%, #1e2124 100%);
+      --btn-grad: linear-gradient(180deg, #626a75 0%, #3a3f47 50%, #25282e 100%);
+      --btn-active: linear-gradient(180deg, #1f2226 0%, #3a3f47 100%);
+      --display-bg: #091209;
+      --led-green: #39ff14;
+      --led-dim: #113807;
+      --accent-silver: #8e98a5;
+      --accent-color: #39ff14;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: #0c0d0e;
+      background-image: 
+        radial-gradient(#1f2429 15%, transparent 16%),
+        radial-gradient(#1f2429 15%, transparent 16%);
+      background-size: 20px 20px;
+      background-position: 0 0, 10px 10px;
+      color: #ccc;
+      font-family: 'Tahoma', 'Arial', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      padding: 10px;
+    }
+
+    .player-chassis {
+      width: 600px;
+      max-width: 100%;
+      background: var(--bg-metal);
+      border: 2px solid #5a636e;
+      border-top-color: #8e98a5;
+      border-left-color: #8e98a5;
+      border-radius: 8px;
+      box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.8),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -2px 5px rgba(0, 0, 0, 0.8);
+      padding: 10px;
+      position: relative;
+    }
+
+    .title-bar {
+      background: linear-gradient(90deg, #15202b 0%, #2a3a4b 50%, #15202b 100%);
+      border: 1px solid #101418;
+      border-radius: 4px 4px 0 0;
+      padding: 4px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+
+    .title-text {
+      font-size: 10px;
+      font-weight: bold;
+      color: #8ab4f8;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      text-shadow: 0 0 4px rgba(138, 180, 248, 0.6);
+    }
+
+    .brand-badge {
+      font-size: 8px;
+      background: #000;
+      color: #39ff14;
+      padding: 1px 5px;
+      border-radius: 3px;
+      border: 1px solid #222;
+      font-family: monospace;
+    }
+
+    .viewport-container {
+      background: #000;
+      border: 2px solid #1a1c1e;
+      border-bottom-color: #434952;
+      border-right-color: #434952;
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      touch-action: none;
+    }
+
+    .viewport-container:fullscreen,
+    .viewport-container:-webkit-full-screen {
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: none !important;
+      max-height: none !important;
+      border-radius: 0 !important;
+      border: none !important;
+      aspect-ratio: auto !important;
+      background: #000 !important;
+    }
+
+    .viewport-container:fullscreen:not(.user-active),
+    .viewport-container:-webkit-full-screen:not(.user-active) {
+      cursor: none;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #000;
+      position: relative;
+      z-index: 1;
+      object-fit: contain;
+      filter: none !important;
+    }
+
+    /* Bottom Hover Navigation Bar Overlay */
+    .hover-nav-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.88) 100%);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      z-index: 30;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease-in-out;
+    }
+
+    .viewport-container:hover .hover-nav-bar,
+    .viewport-container.user-active .hover-nav-bar {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Show on mobile when tapped */
+    .viewport-container.touched .hover-nav-bar {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .hover-btn {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 4px;
+      color: #fff;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 4px 8px;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: background 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 30px;
+      height: 26px;
+      touch-action: manipulation;
+    }
+
+    .hover-btn:hover {
+      background: rgba(57, 255, 20, 0.25);
+      border-color: var(--led-green);
+      color: var(--led-green);
+    }
+
+    .hover-btn:active {
+      transform: scale(0.95);
+    }
+
+    .hover-btn.pip-active {
+      background: rgba(57, 255, 20, 0.35);
+      border-color: var(--led-green);
+      color: var(--led-green);
+      box-shadow: 0 0 20px rgba(57, 255, 20, 0.3);
+    }
+
+    .hover-time-text {
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+      white-space: nowrap;
+    }
+
+    .hover-seeker {
+      flex: 1;
+      cursor: pointer;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255,255,255,0.25);
+      border-radius: 3px;
+      outline: none;
+      touch-action: none;
+    }
+
+    .hover-seeker::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--led-green);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--led-green);
+    }
+
+    /* Progress Bar Preview Tooltip */
+    .progress-preview {
+      position: absolute;
+      bottom: 50px;
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      border: 1px solid var(--led-green);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      z-index: 35;
+      white-space: nowrap;
+    }
+
+    .progress-preview.visible {
+      opacity: 1;
+    }
+
+    /* Vinyl Container Overlay (Only for Audio-Only Files) */
+    .vinyl-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, #0a0f0a 0%, #050805 100%);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .vinyl-wrapper.visible {
+      display: flex;
+    }
+
+    .vinyl-record {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: 
+        radial-gradient(circle, 
+          transparent 28%, 
+          rgba(255, 255, 255, 0.05) 29%, 
+          transparent 30%,
+          rgba(255, 255, 255, 0.03) 45%, 
+          transparent 46%,
+          rgba(255, 255, 255, 0.05) 60%, 
+          transparent 61%
+        ),
+        repeating-radial-gradient(
+          #111 0px, 
+          #111 2px, 
+          #1c1c1c 3px, 
+          #111 4px
+        );
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.9), inset 0 0 20px rgba(255, 255, 255, 0.08);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid #1a1a1a;
+      animation: spinVinyl 2.5s linear infinite;
+      animation-play-state: paused;
+    }
+
+    @media (min-width: 768px) {
+      .vinyl-record {
+        width: 200px;
+        height: 200px;
+      }
+    }
+
+    .vinyl-record.playing {
+      animation-play-state: running;
+    }
+
+    @keyframes spinVinyl {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .vinyl-label {
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 3px solid #1a1a1a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #222;
+      position: relative;
+    }
+
+    @media (min-width: 768px) {
+      .vinyl-label {
+        width: 85px;
+        height: 85px;
+      }
+    }
+
+    .cover-art-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .vinyl-center-hole {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: #091209;
+      border: 2px solid #3a3f47;
+      border-radius: 50%;
+      z-index: 3;
+    }
+
+    .dashboard {
+      background: #141618;
+      border: 2px solid #0a0b0c;
+      border-top-color: #2c3137;
+      border-left-color: #2c3137;
+      border-radius: 4px;
+      margin-top: 8px;
+      padding: 6px;
+      display: grid;
+      grid-template-columns: 1fr 100px;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 480px) {
+      .dashboard {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
+    }
+
+    .lcd-display {
+      background-color: var(--display-bg);
+      border: 2px solid #000;
+      border-radius: 3px;
+      padding: 4px 6px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: inset 0 0 6px rgba(0, 255, 0, 0.2);
+      font-family: 'Courier New', monospace;
+    }
+
+    .lcd-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .time-code {
+      color: var(--led-green);
+      font-size: 16px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-shadow: 0 0 6px var(--led-green);
+    }
+
+    @media (min-width: 768px) {
+      .time-code {
+        font-size: 20px;
+      }
+    }
+
+    .bitrate-info {
+      color: var(--led-green);
+      font-size: 8px;
+      opacity: 0.8;
+      text-align: right;
+    }
+
+    .marquee-container {
+      overflow: hidden;
+      white-space: nowrap;
+      margin-top: 2px;
+      background: #040804;
+      border: 1px solid #0c1a0c;
+      padding: 2px;
+    }
+
+    .marquee-text {
+      display: inline-block;
+      color: var(--led-green);
+      font-size: 10px;
+      text-shadow: 0 0 3px var(--led-green);
+      animation: marquee 12s linear infinite;
+    }
+
+    @keyframes marquee {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+
+    .viz-box {
+      background: var(--display-bg);
+      border: 2px solid #000;
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+      min-height: 50px;
+    }
+
+    @media (min-width: 768px) {
+      .viz-box {
+        min-height: 60px;
+      }
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .seeker-wrapper {
+      margin-top: 6px;
+      background: #111;
+      padding: 3px 4px;
+      border-radius: 3px;
+      border: 1px solid #222;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .seeker-preview {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      border: 1px solid var(--led-green);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      white-space: nowrap;
+      margin-bottom: 4px;
+    }
+
+    .seeker-preview.visible {
+      opacity: 1;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      background: transparent;
+    }
+
+    input[type="range"]:focus {
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      width: 100%;
+      height: 5px;
+      cursor: pointer;
+      background: #000;
+      border: 1px solid #333;
+      border-bottom-color: #555;
+      border-right-color: #555;
+      border-radius: 2px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      height: 12px;
+      width: 8px;
+      border-radius: 1px;
+      background: linear-gradient(180deg, #a3acb8 0%, #4f5661 100%);
+      border: 1px solid #fff;
+      border-bottom-color: #000;
+      border-right-color: #000;
+      cursor: pointer;
+      -webkit-appearance: none;
+      margin-top: -4px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    @media (max-width: 480px) {
+      input[type="range"]::-webkit-slider-thumb {
+        height: 16px;
+        width: 12px;
+        margin-top: -6px;
+      }
+    }
+
+    .controls-deck {
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 3px;
+      flex-wrap: wrap;
+    }
+
+    .retro-btn {
+      background: var(--btn-grad);
+      border: 1px solid #7d8794;
+      border-bottom-color: #121416;
+      border-right-color: #121416;
+      border-radius: 3px;
+      color: #d1d7e0;
+      padding: 5px 8px;
+      font-size: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 26px;
+      transition: all 0.1s ease;
+      touch-action: manipulation;
+    }
+
+    @media (min-width: 768px) {
+      .retro-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+        min-width: 38px;
+        height: 30px;
+      }
+    }
+
+    .retro-btn:active {
+      background: var(--btn-active);
+      border: 1px solid #121416;
+      border-bottom-color: #7d8794;
+      border-right-color: #7d8794;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.8);
+      transform: translateY(1px);
+    }
+
+    .retro-btn.pip-active {
+      border-color: var(--led-green);
+      box-shadow: 0 0 15px rgba(57, 255, 20, 0.3);
+      color: var(--led-green);
+    }
+
+    .retro-btn.active-mode {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 15px rgba(57, 255, 20, 0.2);
+    }
+
+    .vol-container {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #181a1d;
+      padding: 3px 6px;
+      border: 1px solid #000;
+      border-top-color: #2d3238;
+      border-left-color: #2d3238;
+      border-radius: 3px;
+    }
+
+    .vol-label {
+      font-size: 8px;
+      font-weight: bold;
+      color: #8e98a5;
+    }
+
+    .vol-slider {
+      width: 60px !important;
+    }
+
+    @media (min-width: 768px) {
+      .vol-slider {
+        width: 80px !important;
+      }
+    }
+
+    .input-deck {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .file-drop-zone {
+      background: #000;
+      border: 2px dashed #39ff14;
+      border-radius: 4px;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    @media (max-width: 480px) {
+      .file-drop-zone {
+        padding: 8px;
+      }
+      .file-drop-label {
+        font-size: 10px;
+      }
+    }
+
+    .file-drop-zone.dragover {
+      background: #0a200a;
+      border-color: #8ab4f8;
+    }
+
+    .file-drop-label {
+      color: #39ff14;
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: bold;
+      pointer-events: none;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .playlist-box {
+      margin-top: 6px;
+      background: #0a0b0c;
+      border: 1px solid #32373d;
+      border-radius: 3px;
+      padding: 3px;
+      max-height: 100px;
+      overflow-y: auto;
+      flex-shrink: 0;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    @media (min-width: 768px) {
+      .playlist-box {
+        max-height: 140px;
+        padding: 4px;
+      }
+    }
+
+    .playlist-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 3px 4px;
+      border-bottom: 1px solid #141618;
+      margin-bottom: 3px;
+      gap: 6px;
+    }
+
+    .playlist-header span {
+      color: #7a8b9e;
+      font-family: monospace;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .queue-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .queue-clear-btn {
+      background: rgba(255, 80, 80, 0.12);
+      border: 1px solid rgba(255, 120, 120, 0.7);
+      color: #ff9a9a;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 8px;
+      font-weight: bold;
+      padding: 3px 6px;
+      cursor: pointer;
+      line-height: 1.2;
+    }
+
+    .queue-clear-btn:active {
+      transform: scale(0.98);
+    }
+
+    .playlist-item {
+      font-family: monospace;
+      font-size: 9px;
+      color: #7a8b9e;
+      padding: 4px 6px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #141618;
+      align-items: center;
+      touch-action: manipulation;
+    }
+
+    @media (min-width: 768px) {
+      .playlist-item {
+        font-size: 10px;
+        padding: 6px 8px;
+      }
+    }
+
+    .playlist-item:hover {
+      background: #18222d;
+      color: #9eccff;
+    }
+
+    .playlist-item.active {
+      background: #142e14;
+      color: var(--led-green);
+      border-left: 3px solid var(--led-green);
+      padding-left: 5px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.9);
+      color: #39ff14;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 10px;
+      z-index: 10002;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      border: 1px solid #39ff14;
+      pointer-events: none;
+      max-width: 90%;
+      text-align: center;
+    }
+
+    .toast.visible {
+      opacity: 1;
+    }
+
+    /* PiP Status Indicator */
+    .pip-status {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(57, 255, 20, 0.2);
+      border: 1px solid var(--led-green);
+      border-radius: 4px;
+      padding: 3px 8px;
+      color: var(--led-green);
+      font-family: monospace;
+      font-size: 8px;
+      z-index: 25;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .pip-status.visible {
+      opacity: 1;
+    }
+
+    /* Mobile Autoplay Toggle */
+    .autoplay-toggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: #7a8b9e;
+      font-family: monospace;
+      font-size: 8px;
+    }
+
+    .autoplay-toggle input {
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+      accent-color: var(--led-green);
+    }
+
+    @media (min-width: 768px) {
+      .autoplay-toggle {
+        font-size: 9px;
+      }
+      .autoplay-toggle input {
+        width: 16px;
+        height: 16px;
+      }
+    }
+
+    /* Scrollbar styling */
+    .playlist-box::-webkit-scrollbar {
+      width: 4px;
+    }
+    .playlist-box::-webkit-scrollbar-track {
+      background: #000;
+    }
+    .playlist-box::-webkit-scrollbar-thumb {
+      background: #3a3f47;
+      border: 1px solid #5a636e;
+    }
+  </style>
+</head>
+<body>
+
+<div class="player-chassis" id="playerChassis">
+  <div class="title-bar">
+    <span class="title-text">CyberAmp 2000 · Mobile</span>
+    <span class="brand-badge">VER 9.0</span>
+  </div>
+
+  <!-- Viewport Screen -->
+  <div class="viewport-container" id="screenBox">
+    <!-- PiP Status Indicator -->
+    <div class="pip-status" id="pipStatus">📺 PiP ACTIVE</div>
+
+    <!-- Spinning Vinyl Overlay (For Audio Only) -->
+    <div id="vinylWrapper" class="vinyl-wrapper">
+      <div class="vinyl-record" id="vinylRecord">
+        <div class="vinyl-label">
+          <img id="coverArt" class="cover-art-img" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Phonograph_record_%28music%29.svg/1200px-Phonograph_record_%28music%29.svg.png" alt="album cover">
+        </div>
+        <div class="vinyl-center-hole"></div>
+      </div>
+    </div>
+
+    <!-- Video Element -->
+    <video id="mainVideo" loop playsinline preload="auto"></video>
+
+    <!-- Progress Preview Tooltip -->
+    <div class="progress-preview" id="progressPreview">00:00</div>
+
+    <!-- Bottom Hover Navigation Overlay Bar -->
+    <div class="hover-nav-bar" id="hoverNavBar">
+      <button class="hover-btn" id="hoverPlayBtn" title="Play/Pause">►</button>
+      <button class="hover-btn" id="hoverPrevBtn" title="Previous">◄◄</button>
+      <button class="hover-btn" id="hoverNextBtn" title="Next">►►</button>
+      <span class="hover-time-text" id="hoverTimeDisplay">00:00 / 00:00</span>
+      <input type="range" class="hover-seeker" id="hoverSeekBar" value="0" min="0" max="100">
+      <button class="hover-btn" id="hoverFullscreenBtn" title="Toggle Fullscreen">⛶</button>
+      <button class="hover-btn" id="hoverPipBtn" title="Floating Picture-in-Picture">📺</button>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="dashboard">
+    <div class="lcd-display">
+      <div class="lcd-top">
+        <span class="time-code" id="timeDisplay">00:00</span>
+        <div class="bitrate-info">
+          <span id="formatText">LOCAL</span><br>
+          <span id="statusText">READY</span>
+        </div>
+      </div>
+      <div class="marquee-container">
+        <div class="marquee-text" id="marqueeText">CyberAmp 2000 Mobile Ready --- Tap the video to play/pause ---</div>
+      </div>
+    </div>
+    <div class="viz-box">
+      <canvas id="vizCanvas"></canvas>
+    </div>
+  </div>
+
+  <div class="seeker-wrapper" id="seekerWrapper">
+    <div class="seeker-preview" id="seekerPreview">00:00</div>
+    <input type="range" id="seekBar" value="0" min="0" max="100">
+  </div>
+
+  <div class="controls-deck">
+    <div class="btn-group">
+      <button class="retro-btn" id="playBtn">►</button>
+      <button class="retro-btn" id="pauseBtn">❚❚</button>
+      <button class="retro-btn" id="stopBtn">◼</button>
+      <button class="retro-btn" id="prevBtn">◄◄</button>
+      <button class="retro-btn" id="nextBtn">►►</button>
+      <button class="retro-btn" id="pipBtn" title="Floating Picture-in-Picture">📺</button>
+    </div>
+    <div class="vol-container">
+      <span class="vol-label">VOL</span>
+      <input type="range" id="volBar" class="vol-slider" value="80" min="0" max="100">
+      <div class="autoplay-toggle">
+        <input type="checkbox" id="autoplayToggle" checked>
+        <label for="autoplayToggle">▶</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-deck">
+    <div class="file-drop-zone" id="dropZone">
+      <span class="file-drop-label">📁 TAP OR DRAG FILES HERE (.MP4, .MP3, .WAV, .WEBM...)</span>
+      <input type="file" id="fileInput" accept="audio/*,video/*,.mp3,.m4a,.aac,.wav,.flac,.mp4,.mov,.webm" multiple>
+    </div>
+  </div>
+
+  <div class="playlist-box" id="playlist">
+    <div class="playlist-header">
+      <span>📋 Queue</span>
+      <div class="queue-actions">
+        <span id="trackCounter">1 track</span>
+        <button class="queue-clear-btn" id="clearQueueBtn" type="button">Clear Q</button>
+      </div>
+    </div>
+    <div class="playlist-item active" id="sampleItem" data-title="CyberAmp Built-in Test Signal">
+      <span>1. CyberAmp Test Stream</span>
+      <span>TEST</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  (function(){
+    // --- DOM References ---
+    const video = document.getElementById('mainVideo');
+    const screenBox = document.getElementById('screenBox');
+    const vinylWrapper = document.getElementById('vinylWrapper');
+    const vinylRecord = document.getElementById('vinylRecord');
+    const pipStatus = document.getElementById('pipStatus');
+    const progressPreview = document.getElementById('progressPreview');
+    const seekerPreview = document.getElementById('seekerPreview');
+    const seekerWrapper = document.getElementById('seekerWrapper');
+    const trackCounter = document.getElementById('trackCounter');
+    const clearQueueBtn = document.getElementById('clearQueueBtn');
+    
+    // Main deck controls
+    const playBtn = document.getElementById('playBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const pipBtn = document.getElementById('pipBtn');
+    const seekBar = document.getElementById('seekBar');
+    const volBar = document.getElementById('volBar');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const statusText = document.getElementById('statusText');
+    const formatText = document.getElementById('formatText');
+    const marqueeText = document.getElementById('marqueeText');
+    const autoplayToggle = document.getElementById('autoplayToggle');
+    
+    // Hover controls
+    const hoverPlayBtn = document.getElementById('hoverPlayBtn');
+    const hoverPrevBtn = document.getElementById('hoverPrevBtn');
+    const hoverNextBtn = document.getElementById('hoverNextBtn');
+    const hoverSeekBar = document.getElementById('hoverSeekBar');
+    const hoverTimeDisplay = document.getElementById('hoverTimeDisplay');
+    const hoverFullscreenBtn = document.getElementById('hoverFullscreenBtn');
+    const hoverPipBtn = document.getElementById('hoverPipBtn');
+
+    const playlist = document.getElementById('playlist');
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const toast = document.getElementById('toast');
+    const canvas = document.getElementById('vizCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // --- State ---
+    let currentTrackIndex = 0;
+    let isUserSeeking = false;
+    let builtInVideoUrl = '';
+    let mouseIdleTimeout = null;
+    let isPipActive = false;
+    let autoplayEnabled = true;
+    let repeatMode = 'none'; // 'none', 'one', 'all'
+    let touchTimeout = null;
+
+    // --- Toast ---
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('visible');
+      clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(() => toast.classList.remove('visible'), 2000);
+    }
+
+    // --- Format Time ---
+    function formatTime(seconds) {
+      if (isNaN(seconds) || !isFinite(seconds)) return "00:00";
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    }
+
+    // --- Audio File Detection ---
+    function isAudioFile(file) {
+      if (file && file.type && file.type.startsWith('audio/')) return true;
+      const name = (file && file.name ? file.name : '').toLowerCase();
+      const ext = name.split('.').pop() || '';
+      return ['mp3', 'm4a', 'aac', 'wav', 'flac', 'ogg', 'opus', 'alac'].includes(ext);
+    }
+
+    // --- Audio Visualizer ---
+    let audioCtx = null;
+    let analyser = null;
+    let source = null;
+    let dataArray = null;
+
+    function initAudioContext() {
+      if (audioCtx) return;
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+        source = audioCtx.createMediaElementSource(video);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+      } catch(e) {
+        console.log("AudioContext blocked until user gesture.");
+      }
+    }
+
+    // --- Picture-in-Picture ---
+    async function togglePictureInPicture() {
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+          isPipActive = false;
+          pipStatus.classList.remove('visible');
+          pipBtn.classList.remove('pip-active');
+          hoverPipBtn.classList.remove('pip-active');
+          showToast('📺 Exited PiP');
+        } else {
+          if (video.paused) {
+            await video.play();
+          }
+          await video.requestPictureInPicture();
+          isPipActive = true;
+          pipStatus.classList.add('visible');
+          pipBtn.classList.add('pip-active');
+          hoverPipBtn.classList.add('pip-active');
+          showToast('📺 PiP active! Video follows you.');
+        }
+      } catch (error) {
+        showToast('⚠️ PiP not supported. Try playing first.');
+      }
+    }
+
+    // --- Update Display ---
+    function updateMediaDisplay() {
+      const hasVideoTracks = video.videoWidth > 0 && video.videoHeight > 0;
+      const isPlaying = !video.paused && !video.ended;
+
+      if (!hasVideoTracks && video.src) {
+        vinylWrapper.classList.add('visible');
+        formatText.innerText = "AUDIO";
+      } else {
+        vinylWrapper.classList.remove('visible');
+        formatText.innerText = "VIDEO";
+      }
+
+      if (isPlaying) {
+        vinylRecord.classList.add('playing');
+        statusText.innerText = "PLAYING";
+        hoverPlayBtn.textContent = '❚❚';
+      } else {
+        vinylRecord.classList.remove('playing');
+        statusText.innerText = video.paused ? "PAUSED" : "READY";
+        hoverPlayBtn.textContent = '►';
+      }
+
+      // Update track counter
+      const items = playlist.querySelectorAll('.playlist-item');
+      trackCounter.textContent = `${items.length} track${items.length !== 1 ? 's' : ''}`;
+    }
+
+    // --- Load Track ---
+    function loadTrack(index) {
+      const items = playlist.querySelectorAll('.playlist-item');
+      if (items.length === 0) return;
+      
+      items.forEach((item, i) => item.classList.toggle('active', i === index));
+      currentTrackIndex = index;
+
+      const selected = items[index];
+      const src = selected.getAttribute('data-src') || builtInVideoUrl;
+      const title = selected.getAttribute('data-title') || 'Local File';
+
+      marqueeText.innerText = `${title} --- CyberAmp Engine ---`;
+      video.src = src;
+      video.load();
+
+      // Autoplay
+      if (autoplayEnabled) {
+        video.play().then(() => {
+          updateMediaDisplay();
+          initAudioContext();
+        }).catch(() => {
+          statusText.innerText = "READY";
+          updateMediaDisplay();
+        });
+      } else {
+        updateMediaDisplay();
+      }
+    }
+
+    // --- Toggle Play ---
+    function togglePlay() {
+      initAudioContext();
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      
+      if (video.paused) {
+        video.play().then(() => {
+          updateMediaDisplay();
+        }).catch(() => {});
+      } else {
+        video.pause();
+        updateMediaDisplay();
+      }
+    }
+
+    // --- Fullscreen ---
+    function toggleFullscreen() {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (screenBox.requestFullscreen) {
+          screenBox.requestFullscreen();
+        } else if (screenBox.webkitRequestFullscreen) {
+          screenBox.webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+      }
+    }
+
+    // --- Progress Preview ---
+    function updateProgressPreview(e, element) {
+      const rect = element.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const pct = Math.max(0, Math.min(1, x / rect.width));
+      const time = pct * video.duration;
+      
+      const preview = element === seekBar ? seekerPreview : progressPreview;
+      preview.textContent = formatTime(time);
+      preview.style.left = `${pct * 100}%`;
+      preview.classList.add('visible');
+    }
+
+    function hideProgressPreview() {
+      seekerPreview.classList.remove('visible');
+      progressPreview.classList.remove('visible');
+    }
+
+    // --- File Handling ---
+    function addFilesToPlaylist(files) {
+      if (!files || files.length === 0) return;
+
+      const startIdx = playlist.querySelectorAll('.playlist-item').length;
+      let loadedCount = 0;
+
+      Array.from(files).forEach((file) => {
+        try {
+          if (file.name && file.name.toLowerCase().endsWith('.m4p')) {
+            showToast(`❌ ${file.name} is DRM protected. Apple Music tracks can't be played.`);
+            return;
+          }
+
+          const fileURL = URL.createObjectURL(file);
+          const newItem = document.createElement('div');
+          newItem.className = 'playlist-item';
+          newItem.setAttribute('data-src', fileURL);
+          newItem.setAttribute('data-title', file.name);
+
+          const isAudio = isAudioFile(file);
+          const typeLabel = isAudio ? 'AUDIO' : 'VIDEO';
+          const num = startIdx + loadedCount + 1;
+          newItem.innerHTML = `<span>${num}. ${file.name}</span><span>${typeLabel}</span>`;
+
+          playlist.appendChild(newItem);
+          attachPlaylistListeners();
+          loadedCount++;
+        } catch (err) {
+          console.error('iOS File Load Exception:', err);
+          showToast(`⚠️ Exception loading ${file.name}`);
+        }
+      });
+
+      if (loadedCount > 0) {
+        showToast(`📁 Loaded ${loadedCount} file(s)`);
+        updateMediaDisplay();
+
+        if (startIdx === 0) {
+          loadTrack(0);
+        }
+      }
+    }
+
+    function clearQueue() {
+      const items = playlist.querySelectorAll('.playlist-item');
+      if (!items.length) {
+        showToast('🗑️ Queue already empty');
+        return;
+      }
+
+      items.forEach((item) => item.remove());
+      currentTrackIndex = 0;
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      seekBar.value = 0;
+      hoverSeekBar.value = 0;
+      timeDisplay.textContent = '00:00';
+      hoverTimeDisplay.textContent = '00:00 / 00:00';
+      statusText.textContent = 'READY';
+      updateMediaDisplay();
+      showToast('🗑️ Queue cleared');
+    }
+
+    // --- Attach Playlist Listeners ---
+    function attachPlaylistListeners() {
+      const items = playlist.querySelectorAll('.playlist-item');
+      items.forEach((item, index) => {
+        item.onclick = () => loadTrack(index);
+        item.ontouchstart = () => {
+          // Mobile touch feedback
+          item.style.backgroundColor = '#18222d';
+          setTimeout(() => item.style.backgroundColor = '', 200);
+        };
+      });
+    }
+
+    // --- Built-in Test Stream ---
+    function generateBuiltInVideo() {
+      const c = document.createElement('canvas');
+      c.width = 640;
+      c.height = 360;
+      const cCtx = c.getContext('2d');
+      const stream = c.captureStream(30);
+      let mediaRecorder;
+      try {
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      } catch (e) {
+        mediaRecorder = new MediaRecorder(stream);
+      }
+      const chunks = [];
+      mediaRecorder.ondataavailable = e => chunks.push(e.data);
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        builtInVideoUrl = URL.createObjectURL(blob);
+        document.getElementById('sampleItem').setAttribute('data-src', builtInVideoUrl);
+        loadTrack(0);
+      };
+      mediaRecorder.start();
+      let frame = 0;
+      const interval = setInterval(() => {
+        frame++;
+        cCtx.fillStyle = '#050a05';
+        cCtx.fillRect(0, 0, 640, 360);
+        cCtx.strokeStyle = '#113311';
+        cCtx.lineWidth = 2;
+        for (let x = 0; x < 640; x += 40) {
+          cCtx.beginPath(); cCtx.moveTo(x, 0); cCtx.lineTo(x, 360); cCtx.stroke();
+        }
+        for (let y = 0; y < 360; y += 40) {
+          cCtx.beginPath(); cCtx.moveTo(0, y); cCtx.lineTo(640, y); cCtx.stroke();
+        }
+        cCtx.strokeStyle = '#39ff14';
+        cCtx.lineWidth = 4;
+        cCtx.beginPath();
+        cCtx.arc(320, 180, (frame * 3) % 150 + 20, 0, Math.PI * 2);
+        cCtx.stroke();
+        cCtx.fillStyle = '#39ff14';
+        cCtx.font = 'bold 20px monospace';
+        cCtx.fillText('CYBERAMP MOBILE READY', 160, 180);
+        cCtx.font = '13px monospace';
+        cCtx.fillText(`TAP VIDEO TO PLAY/PAUSE`, 180, 220);
+        if (frame >= 90) {
+          clearInterval(interval);
+          mediaRecorder.stop();
+        }
+      }, 33);
+    }
+
+    // --- Visualizer ---
+    function drawVisualizer() {
+      requestAnimationFrame(drawVisualizer);
+      ctx.fillStyle = '#091209';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const numBars = Math.min(12, Math.floor(canvas.width / 8));
+      const barWidth = (canvas.width / numBars) - 2;
+
+      if (analyser && !video.paused) {
+        analyser.getByteFrequencyData(dataArray);
+        for (let i = 0; i < numBars; i++) {
+          const barHeight = Math.max(2, (dataArray[i] / 255) * (canvas.height - 4));
+          const x = i * (barWidth + 2);
+          const y = canvas.height - barHeight;
+          ctx.fillStyle = '#39ff14';
+          ctx.fillRect(x, y, barWidth, barHeight);
+        }
+      } else {
+        for (let i = 0; i < numBars; i++) {
+          const barHeight = (!video.paused) ? Math.floor(Math.random() * (canvas.height - 6)) + 4 : 2;
+          const x = i * (barWidth + 2);
+          const y = canvas.height - barHeight;
+          ctx.fillStyle = '#39ff14';
+          ctx.fillRect(x, y, barWidth, barHeight);
+        }
+      }
+    }
+
+    // --- Mobile Touch Handling ---
+    screenBox.addEventListener('touchstart', () => {
+      screenBox.classList.add('touched');
+      clearTimeout(touchTimeout);
+      touchTimeout = setTimeout(() => {
+        screenBox.classList.remove('touched');
+      }, 3000);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;
+
+      if (e.key === ' ') {
+        e.preventDefault();
+        togglePlay();
+      }
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        video.currentTime = Math.max(0, video.currentTime - 5);
+      }
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        video.currentTime = Math.min(video.duration || 0, video.currentTime + 5);
+      }
+
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      }
+
+      if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        video.muted = !video.muted;
+      }
+    });
+
+    video.onerror = () => {
+      console.error('Media Error Code:', video.error);
+      let errorMsg = 'Unable to play file.';
+      if (video.error) {
+        switch (video.error.code) {
+          case 1: errorMsg = 'Playback aborted by user.'; break;
+          case 2: errorMsg = 'Network error reading file.'; break;
+          case 3: errorMsg = 'File decoding failed or file is corrupted.'; break;
+          case 4: errorMsg = 'Format not supported on this device/browser.'; break;
+        }
+      }
+      showToast(`❌ Error: ${errorMsg}`);
+      statusText.innerText = 'ERROR';
+    };
+
+    // --- Event Listeners ---
+
+    clearQueueBtn.addEventListener('click', clearQueue);
+    
+    // Play/Pause
+    screenBox.addEventListener('click', (e) => {
+      if (e.target.closest('#hoverNavBar')) return;
+      togglePlay();
+    });
+
+    screenBox.addEventListener('dblclick', toggleFullscreen);
+
+    playBtn.addEventListener('click', togglePlay);
+    hoverPlayBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePlay();
+    });
+
+    pauseBtn.addEventListener('click', () => {
+      video.pause();
+      updateMediaDisplay();
+    });
+
+    stopBtn.addEventListener('click', () => {
+      video.pause();
+      video.currentTime = 0;
+      statusText.innerText = "STOPPED";
+      updateMediaDisplay();
+    });
+
+    // Navigation
+    prevBtn.addEventListener('click', () => {
+      const items = playlist.querySelectorAll('.playlist-item');
+      let newIdx = currentTrackIndex - 1;
+      if (newIdx < 0) newIdx = items.length - 1;
+      loadTrack(newIdx);
+    });
+
+    hoverPrevBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const items = playlist.querySelectorAll('.playlist-item');
+      let newIdx = currentTrackIndex - 1;
+      if (newIdx < 0) newIdx = items.length - 1;
+      loadTrack(newIdx);
+    });
+
+    nextBtn.addEventListener('click', () => {
+      const items = playlist.querySelectorAll('.playlist-item');
+      let newIdx = (currentTrackIndex + 1) % items.length;
+      loadTrack(newIdx);
+    });
+
+    hoverNextBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const items = playlist.querySelectorAll('.playlist-item');
+      let newIdx = (currentTrackIndex + 1) % items.length;
+      loadTrack(newIdx);
+    });
+
+    // PiP
+    pipBtn.addEventListener('click', togglePictureInPicture);
+    hoverPipBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      togglePictureInPicture();
+    });
+
+    // Fullscreen
+    hoverFullscreenBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleFullscreen();
+    });
+
+    // Autoplay
+    autoplayToggle.addEventListener('change', () => {
+      autoplayEnabled = autoplayToggle.checked;
+      showToast(autoplayEnabled ? '▶ Autoplay ON' : '⏸ Autoplay OFF');
+    });
+
+    // Video Events
+    video.addEventListener('ended', () => {
+      const items = playlist.querySelectorAll('.playlist-item');
+      const itemCount = items.length || 1;
+
+      if (repeatMode === 'one') {
+        video.currentTime = 0;
+        video.play();
+        return;
+      }
+
+      if (autoplayEnabled) {
+        let newIdx = (currentTrackIndex + 1) % itemCount;
+
+        if (repeatMode === 'all' || newIdx !== 0) {
+          loadTrack(newIdx);
+        } else {
+          statusText.innerText = "ENDED";
+          updateMediaDisplay();
+        }
+      } else {
+        statusText.innerText = "ENDED";
+        updateMediaDisplay();
+      }
+    });
+
+    video.addEventListener('timeupdate', () => {
+      if (video.duration && !isUserSeeking) {
+        const pct = (video.currentTime / video.duration) * 100;
+        seekBar.value = pct;
+        hoverSeekBar.value = pct;
+        
+        const curFormatted = formatTime(video.currentTime);
+        const durFormatted = formatTime(video.duration);
+        
+        timeDisplay.innerText = curFormatted;
+        hoverTimeDisplay.innerText = `${curFormatted} / ${durFormatted}`;
+      }
+    });
+
+    video.addEventListener('loadedmetadata', updateMediaDisplay);
+    video.addEventListener('play', updateMediaDisplay);
+    video.addEventListener('pause', updateMediaDisplay);
+
+    // PiP Events
+    video.addEventListener('enterpictureinpicture', () => {
+      isPipActive = true;
+      pipStatus.classList.add('visible');
+      pipBtn.classList.add('pip-active');
+      hoverPipBtn.classList.add('pip-active');
+      showToast('📺 PiP active!');
+    });
+
+    video.addEventListener('leavepictureinpicture', () => {
+      isPipActive = false;
+      pipStatus.classList.remove('visible');
+      pipBtn.classList.remove('pip-active');
+      hoverPipBtn.classList.remove('pip-active');
+    });
+
+    // --- Seek Bar with Preview ---
+    const handleSeekInput = (val) => {
+      if (video.duration) {
+        video.currentTime = (val / 100) * video.duration;
+        const curFormatted = formatTime(video.currentTime);
+        const durFormatted = formatTime(video.duration);
+        timeDisplay.innerText = curFormatted;
+        hoverTimeDisplay.innerText = `${curFormatted} / ${durFormatted}`;
+      }
+    };
+
+    seekBar.addEventListener('mousedown', () => { isUserSeeking = true; });
+    seekBar.addEventListener('mouseup', () => { isUserSeeking = false; });
+    seekBar.addEventListener('input', () => handleSeekInput(seekBar.value));
+
+    // Progress preview on hover
+    seekBar.addEventListener('mousemove', (e) => updateProgressPreview(e, seekBar));
+    seekBar.addEventListener('mouseleave', hideProgressPreview);
+
+    hoverSeekBar.addEventListener('mousedown', (e) => { e.stopPropagation(); isUserSeeking = true; });
+    hoverSeekBar.addEventListener('mouseup', (e) => { e.stopPropagation(); isUserSeeking = false; });
+    hoverSeekBar.addEventListener('input', (e) => {
+      e.stopPropagation();
+      handleSeekInput(hoverSeekBar.value);
+    });
+
+    hoverSeekBar.addEventListener('mousemove', (e) => {
+      e.stopPropagation();
+      updateProgressPreview(e, hoverSeekBar);
+    });
+    hoverSeekBar.addEventListener('mouseleave', hideProgressPreview);
+
+    // Mobile touch support for seek preview
+    seekBar.addEventListener('touchstart', (e) => {
+      updateProgressPreview(e.touches[0], seekBar);
+    });
+    seekBar.addEventListener('touchmove', (e) => {
+      updateProgressPreview(e.touches[0], seekBar);
+    });
+    seekBar.addEventListener('touchend', hideProgressPreview);
+
+    // Volume
+    volBar.addEventListener('input', () => {
+      video.volume = volBar.value / 100;
+    });
+
+    // --- File Drop ---
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    ['dragleave', 'dragend'].forEach(type => {
+      dropZone.addEventListener(type, () => dropZone.classList.remove('dragover'));
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        addFilesToPlaylist(e.dataTransfer.files);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        addFilesToPlaylist(e.target.files);
+      }
+      e.target.value = '';
+    });
+
+    // --- Init ---
+    attachPlaylistListeners();
+    generateBuiltInVideo();
+    drawVisualizer();
+
+    // Check PiP support
+    if (!document.pictureInPictureEnabled) {
+      pipBtn.style.opacity = '0.4';
+      hoverPipBtn.style.opacity = '0.4';
+      pipBtn.title = 'PiP not supported';
+      hoverPipBtn.title = 'PiP not supported';
+    }
+
+    // Handle visibility change - resume playback if autoplay is on
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && autoplayEnabled && video.paused && video.src) {
+        video.play().catch(() => {});
+      }
+    });
+
+    console.log('📱 CyberAmp Mobile Ready!');
+  })();
+</script>
+</body>
+</html>
