@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CyberAmp 2000 · Mobile Enhanced</title>
+  <title>CyberAmp 2000 · Radio Edition</title>
   <style>
     :root {
       --bg-metal: linear-gradient(180deg, #4c525a 0%, #292d32 40%, #1a1c1e 100%);
@@ -134,6 +134,10 @@
       cursor: none;
     }
 
+    audio {
+      display: none;
+    }
+
     video {
       width: 100%;
       height: 100%;
@@ -145,7 +149,6 @@
       filter: none !important;
     }
 
-    /* Bottom Hover Navigation Bar Overlay */
     .hover-nav-bar {
       position: absolute;
       bottom: 0;
@@ -168,7 +171,6 @@
       pointer-events: auto;
     }
 
-    /* Show on mobile when tapped */
     .viewport-container.touched .hover-nav-bar {
       opacity: 1;
       pointer-events: auto;
@@ -241,7 +243,6 @@
       box-shadow: 0 0 8px var(--led-green);
     }
 
-    /* Progress Bar Preview Tooltip */
     .progress-preview {
       position: absolute;
       bottom: 50px;
@@ -263,7 +264,6 @@
       opacity: 1;
     }
 
-    /* Vinyl Container Overlay (Only for Audio-Only Files) */
     .vinyl-wrapper {
       position: absolute;
       top: 0;
@@ -659,6 +659,81 @@
       flex-shrink: 0;
     }
 
+    .radio-panel {
+      margin-top: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: #0a0b0c;
+      border: 1px solid #32373d;
+      border-radius: 3px;
+      padding: 6px;
+    }
+
+    .radio-input {
+      width: 100%;
+      background: #040804;
+      color: var(--led-green);
+      border: 1px solid #1c2a1c;
+      border-radius: 3px;
+      padding: 6px 8px;
+      font-family: monospace;
+      font-size: 10px;
+      outline: none;
+    }
+
+    .radio-actions {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .radio-actions .retro-btn {
+      min-width: 70px;
+      font-size: 8px;
+      padding: 5px 6px;
+    }
+
+    .preset-radio {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: #080a0b;
+      border: 1px solid #1f2327;
+      border-radius: 3px;
+      padding: 5px;
+    }
+
+    .preset-label {
+      color: var(--led-green);
+      font-family: monospace;
+      font-size: 8px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .preset-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .preset-radio-btn {
+      background: rgba(57, 255, 20, 0.12);
+      border: 1px solid rgba(57, 255, 20, 0.45);
+      color: #b8ffb4;
+      border-radius: 3px;
+      padding: 4px 6px;
+      font-family: monospace;
+      font-size: 8px;
+      cursor: pointer;
+      line-height: 1.2;
+    }
+
+    .preset-radio-btn:active {
+      transform: scale(0.98);
+    }
+
     .file-drop-zone {
       background: #000;
       border: 2px dashed #39ff14;
@@ -811,7 +886,6 @@
       opacity: 1;
     }
 
-    /* PiP Status Indicator */
     .pip-status {
       position: absolute;
       top: 8px;
@@ -833,7 +907,6 @@
       opacity: 1;
     }
 
-    /* Mobile Autoplay Toggle */
     .autoplay-toggle {
       display: flex;
       align-items: center;
@@ -860,7 +933,6 @@
       }
     }
 
-    /* Scrollbar styling */
     .playlist-box::-webkit-scrollbar {
       width: 4px;
     }
@@ -877,8 +949,8 @@
 
 <div class="player-chassis" id="playerChassis">
   <div class="title-bar">
-    <span class="title-text">CyberAmp 2000 · Mobile</span>
-    <span class="brand-badge">VER 9.0</span>
+    <span class="title-text">📻 CyberAmp Radio</span>
+    <span class="brand-badge">VER 10.0</span>
   </div>
 
   <!-- Viewport Screen -->
@@ -896,7 +968,8 @@
       </div>
     </div>
 
-    <!-- Video Element -->
+    <!-- Media Elements -->
+    <audio id="mainAudio" preload="auto"></audio>
     <video id="mainVideo" loop playsinline preload="auto"></video>
 
     <!-- Progress Preview Tooltip -->
@@ -925,7 +998,7 @@
         </div>
       </div>
       <div class="marquee-container">
-        <div class="marquee-text" id="marqueeText">CyberAmp 2000 Mobile Ready --- Tap the video to play/pause ---</div>
+        <div class="marquee-text" id="marqueeText">📻 CyberAmp Radio --- Tap a preset or paste a stream URL ---</div>
       </div>
     </div>
     <div class="viz-box">
@@ -962,6 +1035,25 @@
   </div>
 
   <div class="input-deck">
+    <div class="radio-panel">
+      <input class="radio-input" id="radioUrlInput" type="url" placeholder="https://example.com/radio-stream" autocomplete="off">
+      <div class="radio-actions">
+        <button class="retro-btn" id="radioLoadBtn" type="button">▶ LOAD RADIO</button>
+        <button class="retro-btn" id="radioStopBtn" type="button">◼ STOP</button>
+      </div>
+      <div class="preset-radio">
+        <span class="preset-label">🎵 QUICK PRESETS</span>
+        <div class="preset-links">
+          <button class="preset-radio-btn" type="button" data-radio-url="https://icecast.omroep.nl/radio1-bb-mp3">NPO Radio 1</button>
+          <button class="preset-radio-btn" type="button" data-radio-url="https://icecast.omroep.nl/radio2-bb-mp3">NPO Radio 2</button>
+          <button class="preset-radio-btn" type="button" data-radio-url="https://npr-ice.streamguys1.com/live.mp3">NPR</button>
+          <button class="preset-radio-btn" type="button" data-radio-url="https://kexp-mp3-128.streamguys1.com/kexp128.mp3">KEXP</button>
+          <button class="preset-radio-btn" type="button" data-radio-url="https://icecast.radiofrance.fr/franceinter-midfi.mp3">France Inter</button>
+          <button class="preset-radio-btn" type="button" data-radio-url="https://icecast.radiofrance.fr/franceculture-midfi.mp3">France Culture</button>
+          <button class="preset-radio-btn" type="button" data-radio-url="https://icecast.omroep.nl/radio4-bb-mp3">NPO Radio 4</button>
+        </div>
+      </div>
+    </div>
     <div class="file-drop-zone" id="dropZone">
       <span class="file-drop-label">📁 TAP OR DRAG FILES HERE (.MP4, .MP3, .WAV, .WEBM...)</span>
       <input type="file" id="fileInput" accept="audio/*,video/*,.mp3,.m4a,.aac,.wav,.flac,.mp4,.mov,.webm" multiple>
@@ -972,13 +1064,17 @@
     <div class="playlist-header">
       <span>📋 Queue</span>
       <div class="queue-actions">
-        <span id="trackCounter">1 track</span>
+        <span id="trackCounter">2 tracks</span>
         <button class="queue-clear-btn" id="clearQueueBtn" type="button">Clear Q</button>
       </div>
     </div>
-    <div class="playlist-item active" id="sampleItem" data-title="CyberAmp Built-in Test Signal">
-      <span>1. CyberAmp Test Stream</span>
-      <span>TEST</span>
+    <div class="playlist-item active" id="sampleItem" data-title="NPO Radio 1" data-radio-url="https://icecast.omroep.nl/radio1-bb-mp3">
+      <span>1. NPO Radio 1</span>
+      <span>RADIO</span>
+    </div>
+    <div class="playlist-item" id="sampleItem2" data-title="NPR" data-radio-url="https://npr-ice.streamguys1.com/live.mp3">
+      <span>2. NPR</span>
+      <span>RADIO</span>
     </div>
   </div>
 </div>
@@ -989,6 +1085,7 @@
   (function(){
     // --- DOM References ---
     const video = document.getElementById('mainVideo');
+    const audio = document.getElementById('mainAudio');
     const screenBox = document.getElementById('screenBox');
     const vinylWrapper = document.getElementById('vinylWrapper');
     const vinylRecord = document.getElementById('vinylRecord');
@@ -998,7 +1095,7 @@
     const seekerWrapper = document.getElementById('seekerWrapper');
     const trackCounter = document.getElementById('trackCounter');
     const clearQueueBtn = document.getElementById('clearQueueBtn');
-    
+
     // Main deck controls
     const playBtn = document.getElementById('playBtn');
     const pauseBtn = document.getElementById('pauseBtn');
@@ -1016,7 +1113,7 @@
     const formatText = document.getElementById('formatText');
     const marqueeText = document.getElementById('marqueeText');
     const autoplayToggle = document.getElementById('autoplayToggle');
-    
+
     // Hover controls
     const hoverPlayBtn = document.getElementById('hoverPlayBtn');
     const hoverPrevBtn = document.getElementById('hoverPrevBtn');
@@ -1029,6 +1126,9 @@
     const playlist = document.getElementById('playlist');
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
+    const radioUrlInput = document.getElementById('radioUrlInput');
+    const radioLoadBtn = document.getElementById('radioLoadBtn');
+    const radioStopBtn = document.getElementById('radioStopBtn');
     const toast = document.getElementById('toast');
     const canvas = document.getElementById('vizCanvas');
     const ctx = canvas.getContext('2d');
@@ -1037,23 +1137,22 @@
     let currentTrackIndex = 0;
     let isUserSeeking = false;
     let builtInVideoUrl = '';
-    let mouseIdleTimeout = null;
     let isPipActive = false;
     let autoplayEnabled = true;
-    let repeatMode = 'none'; // 'none', 'one', 'all'
     let touchTimeout = null;
+    let currentMediaMode = 'radio';
 
     // --- Toast ---
     function showToast(msg) {
       toast.textContent = msg;
       toast.classList.add('visible');
       clearTimeout(toast._timeout);
-      toast._timeout = setTimeout(() => toast.classList.remove('visible'), 2000);
+      toast._timeout = setTimeout(() => toast.classList.remove('visible'), 2500);
     }
 
     // --- Format Time ---
     function formatTime(seconds) {
-      if (isNaN(seconds) || !isFinite(seconds)) return "00:00";
+      if (isNaN(seconds) || !isFinite(seconds)) return '00:00';
       const mins = Math.floor(seconds / 60);
       const secs = Math.floor(seconds % 60);
       return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
@@ -1067,27 +1166,46 @@
       return ['mp3', 'm4a', 'aac', 'wav', 'flac', 'ogg', 'opus', 'alac'].includes(ext);
     }
 
-    // --- Audio Visualizer ---
+    // --- Get Active Media ---
+    function getActiveMedia() {
+      return currentMediaMode === 'radio' ? audio : video;
+    }
+
+    // --- Web Audio API Context ---
     let audioCtx = null;
     let analyser = null;
-    let source = null;
+    let videoSourceNode = null;
+    let audioSourceNode = null;
     let dataArray = null;
 
     function initAudioContext() {
-      if (audioCtx) return;
-      try {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 64;
-        source = audioCtx.createMediaElementSource(video);
-        source.connect(analyser);
-        analyser.connect(audioCtx.destination);
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
-      } catch(e) {
-        console.log("AudioContext blocked until user gesture.");
+      if (!audioCtx) {
+        try {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 64;
+          videoSourceNode = audioCtx.createMediaElementSource(video);
+          audioSourceNode = audioCtx.createMediaElementSource(audio);
+          dataArray = new Uint8Array(analyser.frequencyBinCount);
+          analyser.connect(audioCtx.destination);
+        } catch (e) {
+          console.log('AudioContext blocked or already initialized:', e);
+        }
+      }
+
+      if (audioCtx && videoSourceNode && audioSourceNode) {
+        try {
+          videoSourceNode.disconnect();
+          audioSourceNode.disconnect();
+          const activeNode = currentMediaMode === 'radio' ? audioSourceNode : videoSourceNode;
+          activeNode.connect(analyser);
+        } catch (err) {
+          console.warn('Node routing exception:', err);
+        }
       }
     }
 
+    // --- Theme ---
     function setTheme(theme) {
       const selectedTheme = theme === 'purple' ? 'purple' : 'green';
       playerChassis.setAttribute('data-theme', selectedTheme);
@@ -1098,6 +1216,11 @@
 
     // --- Picture-in-Picture ---
     async function togglePictureInPicture() {
+      if (currentMediaMode === 'radio') {
+        showToast('📻 PiP works best with video files.');
+        return;
+      }
+
       try {
         if (document.pictureInPictureElement) {
           await document.exitPictureInPicture();
@@ -1107,15 +1230,13 @@
           hoverPipBtn.classList.remove('pip-active');
           showToast('📺 Exited PiP');
         } else {
-          if (video.paused) {
-            await video.play();
-          }
+          if (video.paused) await video.play();
           await video.requestPictureInPicture();
           isPipActive = true;
           pipStatus.classList.add('visible');
           pipBtn.classList.add('pip-active');
           hoverPipBtn.classList.add('pip-active');
-          showToast('📺 PiP active! Video follows you.');
+          showToast('📺 PiP active!');
         }
       } catch (error) {
         showToast('⚠️ PiP not supported. Try playing first.');
@@ -1124,28 +1245,28 @@
 
     // --- Update Display ---
     function updateMediaDisplay() {
-      const hasVideoTracks = video.videoWidth > 0 && video.videoHeight > 0;
-      const isPlaying = !video.paused && !video.ended;
+      const activeMedia = getActiveMedia();
+      const hasVideoTracks = currentMediaMode === 'video' && video.videoWidth > 0 && video.videoHeight > 0;
+      const isPlaying = !activeMedia.paused && !activeMedia.ended;
 
-      if (!hasVideoTracks && video.src) {
+      if (currentMediaMode === 'radio' || (!hasVideoTracks && activeMedia.src)) {
         vinylWrapper.classList.add('visible');
-        formatText.innerText = "AUDIO";
+        formatText.innerText = currentMediaMode === 'radio' ? 'RADIO' : 'AUDIO';
       } else {
         vinylWrapper.classList.remove('visible');
-        formatText.innerText = "VIDEO";
+        formatText.innerText = 'VIDEO';
       }
 
       if (isPlaying) {
         vinylRecord.classList.add('playing');
-        statusText.innerText = "PLAYING";
+        statusText.innerText = currentMediaMode === 'radio' ? 'STREAMING' : 'PLAYING';
         hoverPlayBtn.textContent = '❚❚';
       } else {
         vinylRecord.classList.remove('playing');
-        statusText.innerText = video.paused ? "PAUSED" : "READY";
+        statusText.innerText = activeMedia.paused ? 'PAUSED' : 'READY';
         hoverPlayBtn.textContent = '►';
       }
 
-      // Update track counter
       const items = playlist.querySelectorAll('.playlist-item');
       trackCounter.textContent = `${items.length} track${items.length !== 1 ? 's' : ''}`;
     }
@@ -1154,25 +1275,38 @@
     function loadTrack(index) {
       const items = playlist.querySelectorAll('.playlist-item');
       if (items.length === 0) return;
-      
+
       items.forEach((item, i) => item.classList.toggle('active', i === index));
       currentTrackIndex = index;
 
       const selected = items[index];
-      const src = selected.getAttribute('data-src') || builtInVideoUrl;
       const title = selected.getAttribute('data-title') || 'Local File';
+      const radioUrl = selected.getAttribute('data-radio-url');
+
+      if (radioUrl) {
+        currentMediaMode = 'radio';
+        marqueeText.innerText = `📻 ${title} --- RADIO ---`;
+        radioUrlInput.value = radioUrl;
+        playRadioStream(radioUrl, title);
+        return;
+      }
+
+      currentMediaMode = 'video';
+      const src = selected.getAttribute('data-src') || builtInVideoUrl;
 
       marqueeText.innerText = `${title} --- CyberAmp Engine ---`;
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
       video.src = src;
       video.load();
 
-      // Autoplay
       if (autoplayEnabled) {
         video.play().then(() => {
           updateMediaDisplay();
           initAudioContext();
         }).catch(() => {
-          statusText.innerText = "READY";
+          statusText.innerText = 'READY';
           updateMediaDisplay();
         });
       } else {
@@ -1180,17 +1314,20 @@
       }
     }
 
-    // --- Toggle Play ---
+    // --- Toggle Play/Pause ---
     function togglePlay() {
+      const activeMedia = getActiveMedia();
       initAudioContext();
       if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-      
-      if (video.paused) {
-        video.play().then(() => {
+
+      if (activeMedia.paused) {
+        activeMedia.play().then(() => {
           updateMediaDisplay();
-        }).catch(() => {});
+        }).catch((err) => {
+          console.error('Playback Error:', err);
+        });
       } else {
-        video.pause();
+        activeMedia.pause();
         updateMediaDisplay();
       }
     }
@@ -1217,8 +1354,9 @@
       const rect = element.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const pct = Math.max(0, Math.min(1, x / rect.width));
-      const time = pct * video.duration;
-      
+      const activeMedia = getActiveMedia();
+      const time = pct * (activeMedia.duration || 0);
+
       const preview = element === seekBar ? seekerPreview : progressPreview;
       preview.textContent = formatTime(time);
       preview.style.left = `${pct * 100}%`;
@@ -1228,6 +1366,54 @@
     function hideProgressPreview() {
       seekerPreview.classList.remove('visible');
       progressPreview.classList.remove('visible');
+    }
+
+    // --- Radio Handler ---
+    function playRadioStream(url, title) {
+      const streamUrl = (url || '').trim();
+      if (!streamUrl) {
+        showToast('⚠️ Enter a radio stream URL first');
+        return;
+      }
+
+      if (!/^https?:\/\//i.test(streamUrl)) {
+        showToast('⚠️ Use a valid http:// or https:// radio URL');
+        return;
+      }
+
+      currentMediaMode = 'radio';
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+
+      audio.crossOrigin = 'anonymous';
+      audio.src = streamUrl;
+      audio.load();
+
+      audio.play().then(() => {
+        formatText.innerText = 'RADIO';
+        statusText.innerText = 'STREAMING';
+        marqueeText.innerText = `📻 ${title || 'RADIO STREAM'} --- ${streamUrl}`;
+        updateMediaDisplay();
+        initAudioContext();
+        showToast(`📻 Streaming: ${title || 'Radio'}`);
+      }).catch((err) => {
+        console.error('Radio Error:', err);
+        statusText.innerText = 'ERROR';
+        showToast('⚠️ Radio blocked — check HTTPS/CORS headers or try a different stream');
+      });
+    }
+
+    function stopRadioStream() {
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      statusText.innerText = 'STOPPED';
+      updateMediaDisplay();
+      showToast('📻 Radio stopped');
     }
 
     // --- File Handling ---
@@ -1240,7 +1426,7 @@
       Array.from(files).forEach((file) => {
         try {
           if (file.name && file.name.toLowerCase().endsWith('.m4p')) {
-            showToast(`❌ ${file.name} is DRM protected. Apple Music tracks can't be played.`);
+            showToast(`❌ ${file.name} is DRM protected.`);
             return;
           }
 
@@ -1259,7 +1445,7 @@
           attachPlaylistListeners();
           loadedCount++;
         } catch (err) {
-          console.error('iOS File Load Exception:', err);
+          console.error('File Load Exception:', err);
           showToast(`⚠️ Exception loading ${file.name}`);
         }
       });
@@ -1283,6 +1469,9 @@
 
       items.forEach((item) => item.remove());
       currentTrackIndex = 0;
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
       video.pause();
       video.removeAttribute('src');
       video.load();
@@ -1295,20 +1484,18 @@
       showToast('🗑️ Queue cleared');
     }
 
-    // --- Attach Playlist Listeners ---
     function attachPlaylistListeners() {
       const items = playlist.querySelectorAll('.playlist-item');
       items.forEach((item, index) => {
         item.onclick = () => loadTrack(index);
         item.ontouchstart = () => {
-          // Mobile touch feedback
           item.style.backgroundColor = '#18222d';
           setTimeout(() => item.style.backgroundColor = '', 200);
         };
       });
     }
 
-    // --- Built-in Test Stream ---
+    // --- Synthetic Test Video ---
     function generateBuiltInVideo() {
       const c = document.createElement('canvas');
       c.width = 640;
@@ -1350,9 +1537,9 @@
         cCtx.stroke();
         cCtx.fillStyle = '#39ff14';
         cCtx.font = 'bold 20px monospace';
-        cCtx.fillText('CYBERAMP MOBILE READY', 160, 180);
+        cCtx.fillText('CYBERAMP RADIO READY', 160, 180);
         cCtx.font = '13px monospace';
-        cCtx.fillText(`TAP VIDEO TO PLAY/PAUSE`, 180, 220);
+        cCtx.fillText('TAP VIDEO TO PLAY/PAUSE', 180, 220);
         if (frame >= 90) {
           clearInterval(interval);
           mediaRecorder.stop();
@@ -1368,8 +1555,10 @@
 
       const numBars = Math.min(12, Math.floor(canvas.width / 8));
       const barWidth = (canvas.width / numBars) - 2;
+      const activeMedia = getActiveMedia();
+      const isPlaying = activeMedia && !activeMedia.paused && !activeMedia.ended;
 
-      if (analyser && !video.paused) {
+      if (analyser && isPlaying) {
         analyser.getByteFrequencyData(dataArray);
         for (let i = 0; i < numBars; i++) {
           const barHeight = Math.max(2, (dataArray[i] / 255) * (canvas.height - 4));
@@ -1380,7 +1569,7 @@
         }
       } else {
         for (let i = 0; i < numBars; i++) {
-          const barHeight = (!video.paused) ? Math.floor(Math.random() * (canvas.height - 6)) + 4 : 2;
+          const barHeight = isPlaying ? Math.floor(Math.random() * (canvas.height - 6)) + 4 : 2;
           const x = i * (barWidth + 2);
           const y = canvas.height - barHeight;
           ctx.fillStyle = '#39ff14';
@@ -1389,68 +1578,55 @@
       }
     }
 
-    // --- Mobile Touch Handling ---
-    screenBox.addEventListener('touchstart', () => {
-      screenBox.classList.add('touched');
-      clearTimeout(touchTimeout);
-      touchTimeout = setTimeout(() => {
-        screenBox.classList.remove('touched');
-      }, 3000);
-    });
-
+    // --- Keyboard Shortcuts ---
     document.addEventListener('keydown', (e) => {
-      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;
-
-      if (e.key === ' ') {
-        e.preventDefault();
-        togglePlay();
-      }
-
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        video.currentTime = Math.max(0, video.currentTime - 5);
-      }
-
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        video.currentTime = Math.min(video.duration || 0, video.currentTime + 5);
-      }
-
-      if (e.key === 'f' || e.key === 'F') {
-        e.preventDefault();
-        toggleFullscreen();
-      }
-
-      if (e.key === 'm' || e.key === 'M') {
-        e.preventDefault();
-        video.muted = !video.muted;
-      }
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+      if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); getActiveMedia().currentTime -= 5; }
+      if (e.key === 'ArrowRight') { e.preventDefault(); getActiveMedia().currentTime += 5; }
+      if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFullscreen(); }
+      if (e.key === 'm' || e.key === 'M') { e.preventDefault(); const m = getActiveMedia(); m.muted = !m.muted; }
     });
 
-    video.onerror = () => {
-      console.error('Media Error Code:', video.error);
-      let errorMsg = 'Unable to play file.';
-      if (video.error) {
-        switch (video.error.code) {
-          case 1: errorMsg = 'Playback aborted by user.'; break;
-          case 2: errorMsg = 'Network error reading file.'; break;
-          case 3: errorMsg = 'File decoding failed or file is corrupted.'; break;
-          case 4: errorMsg = 'Format not supported on this device/browser.'; break;
-        }
-      }
-      showToast(`❌ Error: ${errorMsg}`);
+    // --- Error Handling ---
+    const handleMediaError = (mediaElement, label) => {
+      console.error(`${label} Error Code:`, mediaElement.error);
+      showToast(`❌ ${label} stream error`);
       statusText.innerText = 'ERROR';
     };
 
-    // --- Event Listeners ---
+    video.onerror = () => handleMediaError(video, 'Video');
+    audio.onerror = () => handleMediaError(audio, 'Audio');
+
+    // --- Event Bindings ---
+    radioLoadBtn.addEventListener('click', () => {
+      const url = radioUrlInput.value.trim();
+      playRadioStream(url, 'Custom Stream');
+    });
+    radioStopBtn.addEventListener('click', stopRadioStream);
+
+    document.querySelectorAll('.preset-radio-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const url = btn.getAttribute('data-radio-url') || '';
+        const name = btn.textContent.trim();
+        radioUrlInput.value = url;
+        playRadioStream(url, name);
+      });
+    });
+
+    radioUrlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        playRadioStream(radioUrlInput.value.trim(), 'Custom Stream');
+      }
+    });
 
     themeGreenBtn.addEventListener('click', () => setTheme('green'));
     themePurpleBtn.addEventListener('click', () => setTheme('purple'));
     setTheme('green');
 
     clearQueueBtn.addEventListener('click', clearQueue);
-    
-    // Play/Pause
+
     screenBox.addEventListener('click', (e) => {
       if (e.target.closest('#hoverNavBar')) return;
       togglePlay();
@@ -1465,27 +1641,23 @@
     });
 
     pauseBtn.addEventListener('click', () => {
-      video.pause();
+      const m = getActiveMedia();
+      m.pause();
       updateMediaDisplay();
     });
 
     stopBtn.addEventListener('click', () => {
-      video.pause();
-      video.currentTime = 0;
-      statusText.innerText = "STOPPED";
-      updateMediaDisplay();
+      if (currentMediaMode === 'radio') {
+        stopRadioStream();
+      } else {
+        video.pause();
+        video.currentTime = 0;
+        statusText.innerText = 'STOPPED';
+        updateMediaDisplay();
+      }
     });
 
-    // Navigation
     prevBtn.addEventListener('click', () => {
-      const items = playlist.querySelectorAll('.playlist-item');
-      let newIdx = currentTrackIndex - 1;
-      if (newIdx < 0) newIdx = items.length - 1;
-      loadTrack(newIdx);
-    });
-
-    hoverPrevBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
       const items = playlist.querySelectorAll('.playlist-item');
       let newIdx = currentTrackIndex - 1;
       if (newIdx < 0) newIdx = items.length - 1;
@@ -1498,150 +1670,74 @@
       loadTrack(newIdx);
     });
 
-    hoverNextBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const items = playlist.querySelectorAll('.playlist-item');
-      let newIdx = (currentTrackIndex + 1) % items.length;
-      loadTrack(newIdx);
-    });
-
-    // PiP
     pipBtn.addEventListener('click', togglePictureInPicture);
     hoverPipBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       togglePictureInPicture();
     });
 
-    // Fullscreen
     hoverFullscreenBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       toggleFullscreen();
     });
 
-    // Autoplay
     autoplayToggle.addEventListener('change', () => {
       autoplayEnabled = autoplayToggle.checked;
       showToast(autoplayEnabled ? '▶ Autoplay ON' : '⏸ Autoplay OFF');
     });
 
-    // Video Events
-    video.addEventListener('ended', () => {
-      const items = playlist.querySelectorAll('.playlist-item');
-      const itemCount = items.length || 1;
-
-      if (repeatMode === 'one') {
-        video.currentTime = 0;
-        video.play();
-        return;
-      }
-
-      if (autoplayEnabled) {
-        let newIdx = (currentTrackIndex + 1) % itemCount;
-
-        if (repeatMode === 'all' || newIdx !== 0) {
-          loadTrack(newIdx);
-        } else {
-          statusText.innerText = "ENDED";
-          updateMediaDisplay();
-        }
-      } else {
-        statusText.innerText = "ENDED";
-        updateMediaDisplay();
-      }
-    });
-
-    video.addEventListener('timeupdate', () => {
-      if (video.duration && !isUserSeeking) {
-        const pct = (video.currentTime / video.duration) * 100;
+    // --- Media Time Update ---
+    const handleMediaTimeUpdate = (mediaElement) => {
+      if (mediaElement.duration && isFinite(mediaElement.duration) && !isUserSeeking) {
+        const pct = (mediaElement.currentTime / mediaElement.duration) * 100;
         seekBar.value = pct;
         hoverSeekBar.value = pct;
-        
-        const curFormatted = formatTime(video.currentTime);
-        const durFormatted = formatTime(video.duration);
-        
+
+        const curFormatted = formatTime(mediaElement.currentTime);
+        const durFormatted = formatTime(mediaElement.duration);
+
         timeDisplay.innerText = curFormatted;
         hoverTimeDisplay.innerText = `${curFormatted} / ${durFormatted}`;
-      }
-    });
-
-    video.addEventListener('loadedmetadata', updateMediaDisplay);
-    video.addEventListener('play', updateMediaDisplay);
-    video.addEventListener('pause', updateMediaDisplay);
-
-    // PiP Events
-    video.addEventListener('enterpictureinpicture', () => {
-      isPipActive = true;
-      pipStatus.classList.add('visible');
-      pipBtn.classList.add('pip-active');
-      hoverPipBtn.classList.add('pip-active');
-      showToast('📺 PiP active!');
-    });
-
-    video.addEventListener('leavepictureinpicture', () => {
-      isPipActive = false;
-      pipStatus.classList.remove('visible');
-      pipBtn.classList.remove('pip-active');
-      hoverPipBtn.classList.remove('pip-active');
-    });
-
-    // --- Seek Bar with Preview ---
-    const handleSeekInput = (val) => {
-      if (video.duration) {
-        video.currentTime = (val / 100) * video.duration;
-        const curFormatted = formatTime(video.currentTime);
-        const durFormatted = formatTime(video.duration);
-        timeDisplay.innerText = curFormatted;
-        hoverTimeDisplay.innerText = `${curFormatted} / ${durFormatted}`;
+      } else if (currentMediaMode === 'radio') {
+        timeDisplay.innerText = 'LIVE';
+        hoverTimeDisplay.innerText = 'LIVE STREAM';
       }
     };
 
-    seekBar.addEventListener('mousedown', () => { isUserSeeking = true; });
-    seekBar.addEventListener('mouseup', () => { isUserSeeking = false; });
-    seekBar.addEventListener('input', () => handleSeekInput(seekBar.value));
+    video.addEventListener('timeupdate', () => handleMediaTimeUpdate(video));
+    audio.addEventListener('timeupdate', () => handleMediaTimeUpdate(audio));
 
-    // Progress preview on hover
-    seekBar.addEventListener('mousemove', (e) => updateProgressPreview(e, seekBar));
-    seekBar.addEventListener('mouseleave', hideProgressPreview);
+    video.addEventListener('loadedmetadata', updateMediaDisplay);
+    audio.addEventListener('loadedmetadata', updateMediaDisplay);
+    video.addEventListener('play', updateMediaDisplay);
+    audio.addEventListener('play', updateMediaDisplay);
+    video.addEventListener('pause', updateMediaDisplay);
+    audio.addEventListener('pause', updateMediaDisplay);
 
-    hoverSeekBar.addEventListener('mousedown', (e) => { e.stopPropagation(); isUserSeeking = true; });
-    hoverSeekBar.addEventListener('mouseup', (e) => { e.stopPropagation(); isUserSeeking = false; });
-    hoverSeekBar.addEventListener('input', (e) => {
-      e.stopPropagation();
-      handleSeekInput(hoverSeekBar.value);
+    // --- Seek ---
+    seekBar.addEventListener('input', () => {
+      const m = getActiveMedia();
+      if (m.duration && isFinite(m.duration)) {
+        m.currentTime = (seekBar.value / 100) * m.duration;
+      }
     });
 
-    hoverSeekBar.addEventListener('mousemove', (e) => {
-      e.stopPropagation();
-      updateProgressPreview(e, hoverSeekBar);
-    });
-    hoverSeekBar.addEventListener('mouseleave', hideProgressPreview);
-
-    // Mobile touch support for seek preview
-    seekBar.addEventListener('touchstart', (e) => {
-      updateProgressPreview(e.touches[0], seekBar);
-    });
-    seekBar.addEventListener('touchmove', (e) => {
-      updateProgressPreview(e.touches[0], seekBar);
-    });
-    seekBar.addEventListener('touchend', hideProgressPreview);
-
-    // Volume
+    // --- Volume ---
     volBar.addEventListener('input', () => {
-      video.volume = volBar.value / 100;
+      const v = volBar.value / 100;
+      video.volume = v;
+      audio.volume = v;
     });
 
     // --- File Drop ---
     dropZone.addEventListener('click', () => fileInput.click());
-
     dropZone.addEventListener('dragover', (e) => {
       e.preventDefault();
       dropZone.classList.add('dragover');
     });
-
     ['dragleave', 'dragend'].forEach(type => {
       dropZone.addEventListener(type, () => dropZone.classList.remove('dragover'));
     });
-
     dropZone.addEventListener('drop', (e) => {
       e.preventDefault();
       dropZone.classList.remove('dragover');
@@ -1649,7 +1745,6 @@
         addFilesToPlaylist(e.dataTransfer.files);
       }
     });
-
     fileInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files.length > 0) {
         addFilesToPlaylist(e.target.files);
@@ -1662,22 +1757,14 @@
     generateBuiltInVideo();
     drawVisualizer();
 
-    // Check PiP support
-    if (!document.pictureInPictureEnabled) {
-      pipBtn.style.opacity = '0.4';
-      hoverPipBtn.style.opacity = '0.4';
-      pipBtn.title = 'PiP not supported';
-      hoverPipBtn.title = 'PiP not supported';
-    }
-
-    // Handle visibility change - resume playback if autoplay is on
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && autoplayEnabled && video.paused && video.src) {
-        video.play().catch(() => {});
+    // Load first radio preset
+    setTimeout(() => {
+      const firstRadio = document.querySelector('.playlist-item[data-radio-url]');
+      if (firstRadio) {
+        loadTrack(0);
       }
-    });
+    }, 500);
 
-    console.log('📱 CyberAmp Mobile Ready!');
   })();
 </script>
 </body>
