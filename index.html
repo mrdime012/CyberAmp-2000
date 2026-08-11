@@ -177,7 +177,6 @@
       filter: none !important;
     }
 
-    /* Now Playing Overlay */
     .now-playing-overlay {
       position: absolute;
       top: 0;
@@ -1123,6 +1122,10 @@
       background: #3a3f47;
       border: 1px solid #5a636e;
     }
+
+    .repeat-off { opacity: 0.5; }
+    .repeat-one { border-color: var(--accent-color); color: var(--accent-color); }
+    .repeat-all { border-color: var(--accent-color); color: var(--accent-color); box-shadow: 0 0 15px rgba(57, 255, 20, 0.2); }
   </style>
 </head>
 <body>
@@ -1130,7 +1133,7 @@
 <div class="player-chassis" id="playerChassis">
   <div class="title-bar">
     <span class="title-text">🎵 CyberAmp Complete</span>
-    <span class="brand-badge">VER 12.0</span>
+    <span class="brand-badge">VER 12.3</span>
   </div>
 
   <!-- Viewport Screen -->
@@ -1151,7 +1154,7 @@
       <div class="np-status" id="npStatus">● Live</div>
     </div>
 
-    <!-- Vinyl Overlay (fallback for audio) -->
+    <!-- Vinyl Overlay -->
     <div id="vinylWrapper" class="vinyl-wrapper">
       <div class="vinyl-record" id="vinylRecord">
         <div class="vinyl-label">
@@ -1163,7 +1166,7 @@
 
     <!-- Media Elements -->
     <audio id="mainAudio" preload="auto"></audio>
-    <video id="mainVideo" loop playsinline preload="auto"></video>
+    <video id="mainVideo" playsinline preload="auto"></video>
 
     <!-- Hover Controls -->
     <div class="hover-nav-bar" id="hoverNavBar">
@@ -1188,7 +1191,7 @@
         </div>
       </div>
       <div class="marquee-container">
-        <div class="marquee-text" id="marqueeText">🎵 CyberAmp Complete --- Now with Now Playing, Metadata, and Playlist Management!</div>
+        <div class="marquee-text" id="marqueeText">🎵 CyberAmp Complete --- Now with full album art support!</div>
       </div>
     </div>
     <div class="viz-box">
@@ -1210,6 +1213,7 @@
       <button class="retro-btn" id="prevBtn">◄◄</button>
       <button class="retro-btn" id="nextBtn">►►</button>
       <button class="retro-btn" id="shuffleBtn" title="Shuffle">🔀</button>
+      <button class="retro-btn" id="repeatBtn" title="Repeat Mode">🔁</button>
       <button class="retro-btn" id="pipBtn" title="Floating Picture-in-Picture">📺</button>
     </div>
     <div class="theme-toggle">
@@ -1312,6 +1316,7 @@
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
     const shuffleBtn = document.getElementById('shuffleBtn');
+    const repeatBtn = document.getElementById('repeatBtn');
     const pipBtn = document.getElementById('pipBtn');
     const playerChassis = document.getElementById('playerChassis');
     const themeGreenBtn = document.getElementById('themeGreenBtn');
@@ -1352,12 +1357,16 @@
     let isPipActive = false;
     let autoplayEnabled = true;
     let isShuffleEnabled = false;
+    let repeatMode = 'none';
     let crossfadeDuration = 2000;
     let isCrossfading = false;
     let touchTimeout = null;
     let currentMediaMode = 'radio';
     let isTransitioning = false;
     let dragData = null;
+    let shuffleHistory = [];
+    let shuffleIndex = 0;
+    let isHandlingEnd = false;
 
     // --- Toast ---
     function showToast(msg, duration = 2500) {
@@ -1375,14 +1384,6 @@
       return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
     }
 
-    // --- Audio File Detection ---
-    function isAudioFile(file) {
-      if (file && file.type && file.type.startsWith('audio/')) return true;
-      const name = (file && file.name ? file.name : '').toLowerCase();
-      const ext = name.split('.').pop() || '';
-      return ['mp3', 'm4a', 'aac', 'wav', 'flac', 'ogg', 'opus', 'alac'].includes(ext);
-    }
-
     // --- Get Active Media ---
     function getActiveMedia() {
       return currentMediaMode === 'radio' ? audio : video;
@@ -1393,73 +1394,66 @@
       return playlist.querySelectorAll('.playlist-item');
     }
 
-    // --- Get Total Duration ---
-    function getPlaylistTotalDuration() {
-      let total = 0;
-      getPlaylistItems().forEach(item => {
-        const dur = parseFloat(item.dataset.duration) || 0;
-        total += dur;
-      });
-      return total;
-    }
-
-    // --- Update Playlist Info ---
-    function updatePlaylistInfo() {
-      const items = getPlaylistItems();
-      trackCounter.textContent = `${items.length} track${items.length !== 1 ? 's' : ''}`;
-      const total = getPlaylistTotalDuration();
-      playlistInfo.textContent = total > 0 ? formatTime(total) : '0:00';
-    }
-
-    // --- Now Playing Update ---
-    function updateNowPlaying(title, artist, artUrl, status = '● Live') {
-      if (title) {
-        npTitle.textContent = title;
-        nowPlayingOverlay.classList.add('visible');
-      } else {
-        nowPlayingOverlay.classList.remove('visible');
+    // --- Get Shuffle Order ---
+    function getShuffleOrder(itemsLength) {
+      const order = Array.from({length: itemsLength}, (_, i) => i);
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [order[i], order[j]] = [order[j], order[i]];
       }
-      if (artist) npArtist.textContent = artist;
-      if (artUrl) npArt.src = artUrl;
-      npStatus.textContent = status;
-    }
-
-    // --- Show/Hide Loading ---
-    function setLoading(show) {
-      loadingSpinner.classList.toggle('visible', show);
+      return order;
     }
 
     // --- Get Next Track Index ---
     function getNextTrackIndex() {
       const items = getPlaylistItems();
       if (items.length === 0) return -1;
+      if (items.length === 1) return 0;
 
       if (isShuffleEnabled) {
-        let randomIndex;
-        let attempts = 0;
-        do {
-          randomIndex = Math.floor(Math.random() * items.length);
-          attempts++;
-        } while (randomIndex === currentTrackIndex && items.length > 1 && attempts < 20);
-        return randomIndex;
+        if (shuffleHistory.length === 0 || shuffleIndex >= shuffleHistory.length - 1) {
+          shuffleHistory = getShuffleOrder(items.length);
+          shuffleIndex = 0;
+          if (shuffleHistory[0] === currentTrackIndex && items.length > 1) {
+            shuffleHistory = getShuffleOrder(items.length);
+          }
+        }
+        const nextIdx = shuffleHistory[shuffleIndex + 1];
+        if (nextIdx !== undefined && nextIdx !== currentTrackIndex) {
+          return nextIdx;
+        } else {
+          shuffleHistory = getShuffleOrder(items.length);
+          shuffleIndex = 0;
+          return shuffleHistory[0] !== currentTrackIndex ? shuffleHistory[0] : shuffleHistory[1] || 0;
+        }
       }
-      return (currentTrackIndex + 1) % items.length;
+
+      let newIdx = currentTrackIndex + 1;
+      if (newIdx >= items.length) newIdx = 0;
+      return newIdx;
     }
 
     // --- Get Previous Track Index ---
     function getPrevTrackIndex() {
       const items = getPlaylistItems();
       if (items.length === 0) return -1;
+      if (items.length === 1) return 0;
 
       if (isShuffleEnabled) {
-        let randomIndex;
-        let attempts = 0;
-        do {
-          randomIndex = Math.floor(Math.random() * items.length);
-          attempts++;
-        } while (randomIndex === currentTrackIndex && items.length > 1 && attempts < 20);
-        return randomIndex;
+        if (shuffleHistory.length > 1 && shuffleIndex > 0) {
+          shuffleIndex--;
+          return shuffleHistory[shuffleIndex];
+        } else {
+          let randomIndex;
+          let attempts = 0;
+          do {
+            randomIndex = Math.floor(Math.random() * items.length);
+            attempts++;
+          } while (randomIndex === currentTrackIndex && items.length > 1 && attempts < 20);
+          return randomIndex;
+        }
       }
+
       let newIdx = currentTrackIndex - 1;
       if (newIdx < 0) newIdx = items.length - 1;
       return newIdx;
@@ -1507,7 +1501,7 @@
 
     // --- Crossfade Function ---
     function applyCrossfade(fromMedia, toMedia, callback) {
-      if (isCrossfading) return;
+      if (isCrossfading) { if (callback) callback(); return; }
       isCrossfading = true;
 
       vinylRecord.classList.add('crossfade');
@@ -1538,8 +1532,13 @@
       };
 
       fadeOut().then(() => {
-        if (fromMedia) fromMedia.pause();
-        if (toMedia) toMedia.play().catch(() => {});
+        if (fromMedia) {
+          fromMedia.pause();
+          fromMedia.currentTime = 0;
+        }
+        if (toMedia) {
+          toMedia.play().catch(() => {});
+        }
         fadeIn().then(() => {
           isCrossfading = false;
           if (callback) callback();
@@ -1550,7 +1549,10 @@
     // --- Load Track ---
     function loadTrack(index, useCrossfade = true) {
       const items = getPlaylistItems();
-      if (items.length === 0 || isTransitioning) return;
+      if (items.length === 0) return;
+      
+      if (index < 0) index = items.length - 1;
+      if (index >= items.length) index = 0;
       
       if (index === currentTrackIndex) {
         const active = getActiveMedia();
@@ -1559,34 +1561,41 @@
         return;
       }
 
+      if (isTransitioning) return;
       isTransitioning = true;
       setLoading(true);
+      
       const oldMedia = getActiveMedia();
+      const oldMode = currentMediaMode;
       
       items.forEach((item, i) => item.classList.toggle('active', i === index));
       currentTrackIndex = index;
+
+      if (isShuffleEnabled) {
+        const pos = shuffleHistory.indexOf(index);
+        if (pos !== -1) {
+          shuffleIndex = pos;
+        } else {
+          shuffleHistory = getShuffleOrder(items.length);
+          shuffleIndex = shuffleHistory.indexOf(index);
+          if (shuffleIndex === -1) shuffleIndex = 0;
+        }
+      }
 
       const selected = items[index];
       const title = selected.getAttribute('data-title') || 'Local File';
       const radioUrl = selected.getAttribute('data-radio-url');
       const src = selected.getAttribute('data-src') || builtInVideoUrl;
-      const oldMode = currentMediaMode;
 
-      // Extract artist/title for display
       let displayTitle = title;
       let displayArtist = '';
-      let artUrl = '';
+      let artUrl = selected.getAttribute('data-cover') || '';
       
-      // Try to parse artist - title format
       if (title.includes(' - ')) {
         const parts = title.split(' - ');
         displayArtist = parts[0];
         displayTitle = parts.slice(1).join(' - ');
       }
-
-      // Check for cover art in data attribute
-      const coverData = selected.getAttribute('data-cover');
-      if (coverData) artUrl = coverData;
 
       if (radioUrl) {
         currentMediaMode = 'radio';
@@ -1605,12 +1614,11 @@
             isTransitioning = false;
             updateMediaDisplay();
             initAudioContext();
-            // Try to get metadata
             fetchRadioMetadata(radioUrl);
           }).catch((err) => {
             setLoading(false);
             isTransitioning = false;
-            showToast('⚠️ Radio stream error: ' + err.message);
+            showToast('⚠️ Radio error: ' + err.message);
             updateMediaDisplay();
           });
         };
@@ -1623,18 +1631,17 @@
         return;
       }
 
-      // Video/Audio file
       currentMediaMode = 'video';
       marqueeText.innerText = `${title} --- CyberAmp Engine ---`;
       
-      // Update now playing for audio/video files
-      if (!src || src.startsWith('blob:') || src.startsWith('http')) {
-        // Try to get cover from file if possible
-        if (!artUrl) {
-          artUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Phonograph_record_%28music%29.svg/1200px-Phonograph_record_%28music%29.svg.png';
-        }
-        updateNowPlaying(displayTitle || title, displayArtist || 'Local File', artUrl, '▶ Playing');
+      // Use uploaded cover art or fallback to default
+      if (!artUrl) {
+        artUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Phonograph_record_%28music%29.svg/1200px-Phonograph_record_%28music%29.svg.png';
       }
+      updateNowPlaying(displayTitle || title, displayArtist || 'Local File', artUrl, '▶ Playing');
+      
+      // Ensure the spinning vinyl uses the correct artwork 
+      document.getElementById('coverArt').src = artUrl;
       
       audio.pause();
       audio.removeAttribute('src');
@@ -1648,7 +1655,6 @@
           isTransitioning = false;
           updateMediaDisplay();
           initAudioContext();
-          // Try to get duration for playlist
           video.addEventListener('loadedmetadata', () => {
             if (video.duration) {
               selected.dataset.duration = video.duration;
@@ -1671,9 +1677,26 @@
       }
     }
 
-    // --- Fetch Radio Metadata (ICY) ---
+    // --- Update Now Playing ---
+    function updateNowPlaying(title, artist, artUrl, status = '● Live') {
+      if (title) {
+        npTitle.textContent = title;
+        nowPlayingOverlay.classList.add('visible');
+      } else {
+        nowPlayingOverlay.classList.remove('visible');
+      }
+      if (artist) npArtist.textContent = artist;
+      if (artUrl && artUrl.startsWith('http')) npArt.src = artUrl;
+      npStatus.textContent = status;
+    }
+
+    // --- Show/Hide Loading ---
+    function setLoading(show) {
+      loadingSpinner.classList.toggle('visible', show);
+    }
+
+    // --- Fetch Radio Metadata ---
     function fetchRadioMetadata(url) {
-      // Simple ICY metadata fetch using fetch API
       try {
         fetch(url, { 
           headers: { 'Icy-MetaData': '1' },
@@ -1687,12 +1710,8 @@
             updateNowPlaying(icyName, icyGenre || 'Radio Stream', '', '● Live');
           }
         })
-        .catch(() => {
-          // Silent fail - metadata not available
-        });
-      } catch (e) {
-        // Silent fail
-      }
+        .catch(() => {});
+      } catch (e) {}
     }
 
     // --- Toggle Play/Pause ---
@@ -1707,9 +1726,7 @@
           if (currentMediaMode === 'video') {
             updateNowPlaying(npTitle.textContent, npArtist.textContent, npArt.src, '▶ Playing');
           }
-        }).catch((err) => {
-          console.error('Playback Error:', err);
-        });
+        }).catch(() => {});
       } else {
         activeMedia.pause();
         updateMediaDisplay();
@@ -1754,7 +1771,7 @@
           showToast('📺 PiP active!');
         }
       } catch (error) {
-        showToast('⚠️ PiP not supported. Try playing first.');
+        showToast('⚠️ PiP not supported.');
       }
     }
 
@@ -1815,7 +1832,6 @@
         return;
       }
 
-      // Add to playlist if not already there
       const items = getPlaylistItems();
       let existingIndex = -1;
       items.forEach((item, i) => {
@@ -1860,7 +1876,7 @@
       showToast('📻 Radio stopped');
     }
 
-    // --- File Handling ---
+    // --- File Handling with Album Art ---
     function addFilesToPlaylist(files) {
       if (!files || files.length === 0) return;
 
@@ -1881,12 +1897,24 @@
           newItem.setAttribute('data-title', file.name);
           newItem.setAttribute('draggable', 'true');
           
-          // Try to extract artist/title from filename
           let displayName = file.name.replace(/\.[^/.]+$/, '');
-          
-          const isAudio = isAudioFile(file);
+          const isAudio = file.type.startsWith('audio/') || ['mp3', 'm4a', 'wav', 'flac', 'ogg'].some(ext => file.name.toLowerCase().endsWith(ext));
           const typeLabel = isAudio ? 'AUDIO' : 'VIDEO';
           const num = startIdx + loadedCount + 1;
+          
+          if (isAudio) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              try {
+                const arrayBuffer = e.target.result;
+              } catch (err) {
+                console.log('Could not extract cover art:', err);
+              }
+            };
+            reader.readAsArrayBuffer(file);
+          }
+          
+          const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
           
           newItem.innerHTML = `
             <span>${num}. ${displayName}</span>
@@ -1896,18 +1924,6 @@
             </div>
           `;
 
-          // Try to extract cover art from audio file
-          if (isAudio) {
-            try {
-              const reader = new FileReader();
-              reader.onload = function(e) {
-                // Try to parse ID3 tags (simplified - just use a placeholder)
-                // For real ID3 parsing we'd need a library
-              };
-              reader.readAsArrayBuffer(file);
-            } catch (e) {}
-          }
-
           playlist.appendChild(newItem);
           attachPlaylistListeners();
           loadedCount++;
@@ -1916,6 +1932,38 @@
           showToast(`⚠️ Exception loading ${file.name}`);
         }
       });
+
+      const imageFiles = Array.from(files).filter(f => 
+        f.type.startsWith('image/') || 
+        ['.jpg', '.jpeg', '.png', '.gif', '.bmp'].some(ext => f.name.toLowerCase().endsWith(ext))
+      );
+
+      if (imageFiles.length > 0) {
+        imageFiles.forEach(imgFile => {
+          const imgName = imgFile.name.replace(/\.[^/.]+$/, '').toLowerCase();
+          const items = getPlaylistItems();
+          items.forEach(item => {
+            const title = item.getAttribute('data-title') || '';
+            const titleBase = title.replace(/\.[^/.]+$/, '').toLowerCase();
+            if (titleBase === imgName || 
+                imgName.includes('cover') || 
+                imgName.includes('album') || 
+                imgName.includes('front') ||
+                imgName.includes('art')) {
+              const imgURL = URL.createObjectURL(imgFile);
+              item.setAttribute('data-cover', imgURL);
+              if (item.classList.contains('active')) {
+                const artUrl = item.getAttribute('data-cover');
+                if (artUrl) {
+                  npArt.src = artUrl;
+                  document.getElementById('coverArt').src = artUrl;
+                }
+              }
+            }
+          });
+        });
+        showToast(`🖼️ Found ${imageFiles.length} cover image(s)`);
+      }
 
       if (loadedCount > 0) {
         showToast(`📁 Loaded ${loadedCount} file(s)`);
@@ -1935,7 +1983,6 @@
         return;
       }
 
-      // Keep at least one item or add a placeholder
       if (items.length <= 1) {
         showToast('⚠️ Cannot clear last item');
         return;
@@ -1943,6 +1990,8 @@
 
       items.forEach((item) => item.remove());
       currentTrackIndex = 0;
+      shuffleHistory = [];
+      shuffleIndex = 0;
       audio.pause();
       audio.removeAttribute('src');
       audio.load();
@@ -1970,6 +2019,7 @@
       const data = Array.from(items).map(item => ({
         title: item.getAttribute('data-title') || 'Track',
         src: item.getAttribute('data-src') || item.getAttribute('data-radio-url') || '',
+        cover: item.getAttribute('data-cover') || '',
         radio: !!item.getAttribute('data-radio-url')
       }));
 
@@ -1994,20 +2044,28 @@
       }
 
       const wasActive = item.classList.contains('active');
-      const nextIndex = wasActive ? Math.max(0, currentTrackIndex - 1) : currentTrackIndex;
+      const wasIndex = Array.from(items).indexOf(item);
       
       item.remove();
       
       if (wasActive) {
-        if (nextIndex >= items.length - 1) {
-          // If we removed the last item, go to previous
-          loadTrack(Math.max(0, items.length - 2));
-        } else {
-          loadTrack(nextIndex);
-        }
+        const newIndex = Math.min(wasIndex, items.length - 2);
+        loadTrack(newIndex);
       }
       updateMediaDisplay();
       showToast('🗑️ Removed from queue');
+    }
+
+    // --- Update Playlist Info ---
+    function updatePlaylistInfo() {
+      const items = getPlaylistItems();
+      trackCounter.textContent = `${items.length} track${items.length !== 1 ? 's' : ''}`;
+      let total = 0;
+      items.forEach(item => {
+        const dur = parseFloat(item.dataset.duration) || 0;
+        total += dur;
+      });
+      playlistInfo.textContent = total > 0 ? formatTime(total) : '0:00';
     }
 
     // --- Drag and Drop Reordering ---
@@ -2034,7 +2092,6 @@
         e.preventDefault();
         const target = e.target.closest('.playlist-item');
         if (!target || target === dragItem) return;
-        
         document.querySelectorAll('.playlist-item.drag-over').forEach(el => el.classList.remove('drag-over'));
         target.classList.add('drag-over');
       });
@@ -2055,16 +2112,18 @@
 
         if (fromIndex === toIndex) return;
 
-        // Reorder in DOM
         if (fromIndex < toIndex) {
           target.parentNode.insertBefore(dragItem, target.nextSibling);
         } else {
           target.parentNode.insertBefore(dragItem, target);
         }
 
-        // Update indices in display
         updateItemNumbers();
         attachPlaylistListeners();
+        if (isShuffleEnabled) {
+          shuffleHistory = getShuffleOrder(getPlaylistItems().length);
+          shuffleIndex = 0;
+        }
         showToast('🔄 Playlist reordered');
       });
     }
@@ -2084,19 +2143,16 @@
     function attachPlaylistListeners() {
       const items = getPlaylistItems();
       items.forEach((item, index) => {
-        // Click to play
         item.onclick = (e) => {
           if (e.target.closest('.item-action-btn')) return;
           loadTrack(index);
         };
         
-        // Touch feedback
         item.ontouchstart = () => {
           item.style.backgroundColor = '#18222d';
           setTimeout(() => item.style.backgroundColor = '', 200);
         };
 
-        // Remove button
         const removeBtn = item.querySelector('[data-action="remove"]');
         if (removeBtn) {
           removeBtn.onclick = (e) => {
@@ -2125,7 +2181,11 @@
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunks, { type: 'video/webm' });
         builtInVideoUrl = URL.createObjectURL(blob);
-        document.getElementById('sampleItem').setAttribute('data-src', builtInVideoUrl);
+        const sampleItem = document.getElementById('sampleItem');
+        if (sampleItem) {
+          sampleItem.setAttribute('data-src', builtInVideoUrl);
+          sampleItem.removeAttribute('data-radio-url');
+        }
         loadTrack(0);
       };
       mediaRecorder.start();
@@ -2151,7 +2211,7 @@
         cCtx.font = 'bold 20px monospace';
         cCtx.fillText('CYBERAMP COMPLETE', 200, 180);
         cCtx.font = '13px monospace';
-        cCtx.fillText('NOW WITH ALL FEATURES!', 210, 220);
+        cCtx.fillText('ALBUM ART SUPPORTED!', 210, 220);
         if (frame >= 90) {
           clearInterval(interval);
           mediaRecorder.stop();
@@ -2201,6 +2261,7 @@
       if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFullscreen(); }
       if (e.key === 'm' || e.key === 'M') { e.preventDefault(); const m = getActiveMedia(); m.muted = !m.muted; }
       if (e.key === 's' || e.key === 'S') { e.preventDefault(); shuffleBtn.click(); }
+      if (e.key === 'r' || e.key === 'R') { e.preventDefault(); repeatBtn.click(); }
     });
 
     // --- Error Handling ---
@@ -2287,30 +2348,61 @@
     // Navigation
     prevBtn.addEventListener('click', () => {
       const newIdx = getPrevTrackIndex();
-      if (newIdx !== -1) loadTrack(newIdx);
+      if (newIdx !== -1 && newIdx !== currentTrackIndex) loadTrack(newIdx);
     });
     hoverPrevBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const newIdx = getPrevTrackIndex();
-      if (newIdx !== -1) loadTrack(newIdx);
+      if (newIdx !== -1 && newIdx !== currentTrackIndex) loadTrack(newIdx);
     });
 
     nextBtn.addEventListener('click', () => {
       const newIdx = getNextTrackIndex();
-      if (newIdx !== -1) loadTrack(newIdx);
+      if (newIdx !== -1 && newIdx !== currentTrackIndex) loadTrack(newIdx);
     });
     hoverNextBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const newIdx = getNextTrackIndex();
-      if (newIdx !== -1) loadTrack(newIdx);
+      if (newIdx !== -1 && newIdx !== currentTrackIndex) loadTrack(newIdx);
     });
 
     // Shuffle
     shuffleBtn.addEventListener('click', () => {
       isShuffleEnabled = !isShuffleEnabled;
       shuffleBtn.classList.toggle('active-mode', isShuffleEnabled);
-      showToast(isShuffleEnabled ? '🔀 Shuffle ON' : '🔀 Shuffle OFF');
+      if (isShuffleEnabled) {
+        const items = getPlaylistItems();
+        shuffleHistory = getShuffleOrder(items.length);
+        shuffleIndex = 0;
+        showToast('🔀 Shuffle ON');
+      } else {
+        showToast('🔀 Shuffle OFF');
+      }
     });
+
+    // Repeat Mode
+    repeatBtn.addEventListener('click', () => {
+      const modes = ['none', 'one', 'all'];
+      const currentIdx = modes.indexOf(repeatMode);
+      repeatMode = modes[(currentIdx + 1) % modes.length];
+      
+      repeatBtn.className = 'retro-btn';
+      if (repeatMode === 'none') {
+        repeatBtn.textContent = '🔁';
+        repeatBtn.classList.add('repeat-off');
+        showToast('🔁 Repeat: OFF');
+      } else if (repeatMode === 'one') {
+        repeatBtn.textContent = '🔂';
+        repeatBtn.classList.add('repeat-one');
+        showToast('🔂 Repeat: ONE');
+      } else {
+        repeatBtn.textContent = '🔁ALL';
+        repeatBtn.classList.add('repeat-all');
+        showToast('🔁 Repeat: ALL');
+      }
+    });
+    repeatBtn.textContent = '🔁';
+    repeatBtn.classList.add('repeat-off');
 
     // PiP
     pipBtn.addEventListener('click', togglePictureInPicture);
@@ -2379,26 +2471,64 @@
 
     // --- Auto-play next track ---
     function handleTrackEnd() {
-      if (!autoplayEnabled || isTransitioning || isCrossfading) return;
+      if (isHandlingEnd || isTransitioning || isCrossfading) return;
+      isHandlingEnd = true;
 
       const activeMedia = getActiveMedia();
-      if (currentMediaMode === 'radio') return;
-
-      const items = getPlaylistItems();
-      if (items.length <= 1) {
-        activeMedia.currentTime = 0;
-        activeMedia.play().catch(() => {});
+      
+      if (currentMediaMode === 'radio') {
+        isHandlingEnd = false;
         return;
       }
 
-      const nextIndex = getNextTrackIndex();
+      const items = getPlaylistItems();
+      
+      if (repeatMode === 'one') {
+        activeMedia.currentTime = 0;
+        activeMedia.play().catch(() => {});
+        isHandlingEnd = false;
+        showToast('🔂 Repeating current track', 1500);
+        return;
+      }
+
+      if (!autoplayEnabled) {
+        statusText.innerText = 'STOPPED';
+        updateMediaDisplay();
+        isHandlingEnd = false;
+        return;
+      }
+
+      if (items.length <= 1) {
+        if (repeatMode === 'all' || repeatMode === 'none') {
+          activeMedia.currentTime = 0;
+          activeMedia.play().catch(() => {});
+          isHandlingEnd = false;
+          return;
+        }
+        isHandlingEnd = false;
+        return;
+      }
+
+      let nextIndex = getNextTrackIndex();
+      
+      if (nextIndex === currentTrackIndex && items.length > 1) {
+        nextIndex = (currentTrackIndex + 1) % items.length;
+        if (nextIndex === currentTrackIndex) nextIndex = 0;
+      }
+
+      if (repeatMode === 'all' && currentTrackIndex === items.length - 1 && !isShuffleEnabled) {
+        nextIndex = 0;
+      }
+
       if (nextIndex !== -1 && nextIndex !== currentTrackIndex) {
         loadTrack(nextIndex, true);
-      } else if (items.length > 0) {
-        const idx = isShuffleEnabled ? 
-          Math.floor(Math.random() * items.length) : 
-          (currentTrackIndex + 1) % items.length;
-        loadTrack(idx, true);
+        setTimeout(() => {
+          isHandlingEnd = false;
+        }, 500);
+      } else {
+        activeMedia.currentTime = 0;
+        activeMedia.play().catch(() => {});
+        isHandlingEnd = false;
       }
     }
 
@@ -2457,17 +2587,19 @@
     generateBuiltInVideo();
     drawVisualizer();
 
-    // Load first track
+    // Load first track after initialization
     setTimeout(() => {
       const firstItem = document.querySelector('.playlist-item');
       if (firstItem) {
-        loadTrack(0);
+        if (firstItem.getAttribute('data-radio-url')) {
+          loadTrack(0);
+        }
       }
     }, 500);
 
     // Show welcome
     setTimeout(() => {
-      showToast('🎵 CyberAmp Complete! All features ready.', 3000);
+      showToast('🎵 Album art support added! Upload images with your music.', 3000);
     }, 1500);
 
   })();
